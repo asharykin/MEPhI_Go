@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS credit_payments (
+    id SERIAL PRIMARY KEY,
+    credit_id INTEGER NOT NULL REFERENCES credits(id),
+    amount DECIMAL(15,2) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    due_date TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+); 
