@@ -1,4 +1,5 @@
--- Таблица пользователей
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
@@ -8,7 +9,6 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Таблица счетов
 CREATE TABLE IF NOT EXISTS accounts (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -18,7 +18,6 @@ CREATE TABLE IF NOT EXISTS accounts (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Таблица карт
 CREATE TABLE IF NOT EXISTS cards (
     id SERIAL PRIMARY KEY,
     account_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE,
@@ -30,12 +29,11 @@ CREATE TABLE IF NOT EXISTS cards (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Таблица транзакций
 CREATE TABLE IF NOT EXISTS transactions (
     id SERIAL PRIMARY KEY,
     from_account_id INTEGER REFERENCES accounts(id),
     to_account_id INTEGER REFERENCES accounts(id),
-    account_id INTEGER REFERENCES accounts(id), -- Для депозитов и снятий
+    account_id INTEGER REFERENCES accounts(id),
     amount DECIMAL(15,2) NOT NULL,
     type VARCHAR(50) NOT NULL,
     status VARCHAR(50) NOT NULL,
@@ -43,7 +41,6 @@ CREATE TABLE IF NOT EXISTS transactions (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Таблица кредитов
 CREATE TABLE IF NOT EXISTS credits (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -56,7 +53,6 @@ CREATE TABLE IF NOT EXISTS credits (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Таблица графика платежей
 CREATE TABLE IF NOT EXISTS payment_schedules (
     id SERIAL PRIMARY KEY,
     credit_id INTEGER REFERENCES credits(id) ON DELETE CASCADE,
@@ -67,4 +63,13 @@ CREATE TABLE IF NOT EXISTS payment_schedules (
     status VARCHAR(50) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-); 
+);
+
+CREATE TABLE IF NOT EXISTS credit_payments (
+    id SERIAL PRIMARY KEY,
+    credit_id INTEGER NOT NULL REFERENCES credits(id),
+    amount DECIMAL(15,2) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    due_date TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
