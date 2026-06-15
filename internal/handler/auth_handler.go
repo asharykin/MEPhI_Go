@@ -1,16 +1,16 @@
 package handler
 
 import (
-	"banksystem/internal/services"
+	"banksystem/internal/service"
 	"encoding/json"
 	"net/http"
 )
 
 type AuthHandler struct {
-	service *services.AuthService
+	service *service.AuthService
 }
 
-func NewAuthHandler(service *services.AuthService) *AuthHandler {
+func NewAuthHandler(service *service.AuthService) *AuthHandler {
 	return &AuthHandler{service: service}
 }
 

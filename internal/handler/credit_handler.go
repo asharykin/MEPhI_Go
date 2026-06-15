@@ -1,17 +1,17 @@
 package handler
 
 import (
-	"banksystem/internal/services"
+	"banksystem/internal/service"
 	"encoding/json"
 	"net/http"
 	"strconv"
 )
 
 type CreditHandler struct {
-	service *services.CreditService
+	service *service.CreditService
 }
 
-func NewCreditHandler(service *services.CreditService) *CreditHandler {
+func NewCreditHandler(service *service.CreditService) *CreditHandler {
 	return &CreditHandler{service: service}
 }
 

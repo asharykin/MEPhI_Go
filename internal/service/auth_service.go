@@ -1,8 +1,8 @@
-package services
+package service
 
 import (
 	"banksystem/internal/model"
-	"banksystem/internal/repositories"
+	"banksystem/internal/repository"
 	"context"
 	"database/sql"
 	"time"
@@ -11,12 +11,12 @@ import (
 )
 
 type AuthService struct {
-	userRepo   *repositories.UserRepository
+	userRepo   *repository.UserRepository
 	jwtService *JWTService
 	db         *sql.DB
 }
 
-func NewAuthService(db *sql.DB, userRepo *repositories.UserRepository, jwtService *JWTService) *AuthService {
+func NewAuthService(db *sql.DB, userRepo *repository.UserRepository, jwtService *JWTService) *AuthService {
 	return &AuthService{
 		db:         db,
 		userRepo:   userRepo,

@@ -1,8 +1,8 @@
-package services
+package service
 
 import (
 	"banksystem/internal/model"
-	"banksystem/internal/repositories"
+	"banksystem/internal/repository"
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -18,11 +18,11 @@ import (
 )
 
 type CardService struct {
-	cardRepo *repositories.CardRepository
+	cardRepo *repository.CardRepository
 	key      *openpgp.Entity
 }
 
-func NewCardService(cardRepo *repositories.CardRepository, key *openpgp.Entity) *CardService {
+func NewCardService(cardRepo *repository.CardRepository, key *openpgp.Entity) *CardService {
 	return &CardService{
 		cardRepo: cardRepo,
 		key:      key,

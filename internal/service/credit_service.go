@@ -1,8 +1,8 @@
-package services
+package service
 
 import (
 	"banksystem/internal/model"
-	"banksystem/internal/repositories"
+	"banksystem/internal/repository"
 	"context"
 	"database/sql"
 	"errors"
@@ -11,19 +11,19 @@ import (
 )
 
 type CreditService struct {
-	creditRepo      *repositories.CreditRepository
-	accountRepo     *repositories.AccountRepository
-	paymentRepo     *repositories.CreditPaymentRepository
-	transactionRepo *repositories.TransactionRepository
+	creditRepo      *repository.CreditRepository
+	accountRepo     *repository.AccountRepository
+	paymentRepo     *repository.CreditPaymentRepository
+	transactionRepo *repository.TransactionRepository
 	db              *sql.DB
 }
 
 func NewCreditService(
 	db *sql.DB,
-	creditRepo *repositories.CreditRepository,
-	accountRepo *repositories.AccountRepository,
-	paymentRepo *repositories.CreditPaymentRepository,
-	transactionRepo *repositories.TransactionRepository,
+	creditRepo *repository.CreditRepository,
+	accountRepo *repository.AccountRepository,
+	paymentRepo *repository.CreditPaymentRepository,
+	transactionRepo *repository.TransactionRepository,
 ) *CreditService {
 	return &CreditService{
 		db:              db,

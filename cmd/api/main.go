@@ -3,8 +3,8 @@ package main
 import (
 	"banksystem/internal/config"
 	"banksystem/internal/handler"
-	"banksystem/internal/repositories"
-	"banksystem/internal/services"
+	"banksystem/internal/repository"
+	"banksystem/internal/service"
 	"database/sql"
 	"log"
 	"net/http"
@@ -25,22 +25,22 @@ func main() {
 	logger := logrus.New()
 	logger.SetFormatter(&logrus.JSONFormatter{})
 
-	userRepo := repositories.NewUserRepository(db)
-	accountRepo := repositories.NewAccountRepository(db)
-	transactionRepo := repositories.NewTransactionRepository(db)
-	creditRepo := repositories.NewCreditRepository(db)
-	creditPaymentRepo := repositories.NewCreditPaymentRepository(db)
-	cardRepo := repositories.NewCardRepository(db)
+	userRepo := repository.NewUserRepository(db)
+	accountRepo := repository.NewAccountRepository(db)
+	transactionRepo := repository.NewTransactionRepository(db)
+	creditRepo := repository.NewCreditRepository(db)
+	creditPaymentRepo := repository.NewCreditPaymentRepository(db)
+	cardRepo := repository.NewCardRepository(db)
 
-	smtpService := services.NewSMTPService(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUsername, cfg.SMTPPassword)
+	smtpService := service.NewSMTPService(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUsername, cfg.SMTPPassword)
 
-	jwtService := services.NewJWTService(cfg.JWTSecret)
+	jwtService := service.NewJWTService(cfg.JWTSecret)
 
-	authService := services.NewAuthService(db, userRepo, jwtService)
-	accountService := services.NewAccountService(db, accountRepo, transactionRepo, userRepo, smtpService)
-	cardService := services.NewCardService(cardRepo, nil)
-	creditService := services.NewCreditService(db, creditRepo, accountRepo, creditPaymentRepo, transactionRepo)
-	creditPaymentService := services.NewCreditPaymentService(db, creditPaymentRepo, creditRepo, accountRepo)
+	authService := service.NewAuthService(db, userRepo, jwtService)
+	accountService := service.NewAccountService(db, accountRepo, transactionRepo, userRepo, smtpService)
+	cardService := service.NewCardService(cardRepo, nil)
+	creditService := service.NewCreditService(db, creditRepo, accountRepo, creditPaymentRepo, transactionRepo)
+	creditPaymentService := service.NewCreditPaymentService(db, creditPaymentRepo, creditRepo, accountRepo)
 
 	authHandler := handler.NewAuthHandler(authService)
 	accountHandler := handler.NewAccountHandler(accountService)

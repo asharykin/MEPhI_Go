@@ -2,17 +2,17 @@ package handler
 
 import (
 	"banksystem/internal/model"
-	"banksystem/internal/services"
+	"banksystem/internal/service"
 	"encoding/json"
 	"net/http"
 	"strconv"
 )
 
 type AccountHandler struct {
-	service *services.AccountService
+	service *service.AccountService
 }
 
-func NewAccountHandler(service *services.AccountService) *AccountHandler {
+func NewAccountHandler(service *service.AccountService) *AccountHandler {
 	return &AccountHandler{service: service}
 }
 

@@ -1,8 +1,8 @@
-package services
+package service
 
 import (
 	"banksystem/internal/model"
-	"banksystem/internal/repositories"
+	"banksystem/internal/repository"
 	"context"
 	"database/sql"
 	"fmt"
@@ -10,18 +10,18 @@ import (
 )
 
 type AccountService struct {
-	accountRepo     *repositories.AccountRepository
-	transactionRepo *repositories.TransactionRepository
-	userRepo        *repositories.UserRepository
+	accountRepo     *repository.AccountRepository
+	transactionRepo *repository.TransactionRepository
+	userRepo        *repository.UserRepository
 	db              *sql.DB
 	smtpService     *SMTPService
 }
 
 func NewAccountService(
 	db *sql.DB,
-	accountRepo *repositories.AccountRepository,
-	transactionRepo *repositories.TransactionRepository,
-	userRepo *repositories.UserRepository,
+	accountRepo *repository.AccountRepository,
+	transactionRepo *repository.TransactionRepository,
+	userRepo *repository.UserRepository,
 	smtpService *SMTPService,
 ) *AccountService {
 	return &AccountService{
