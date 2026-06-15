@@ -2,7 +2,7 @@ package main
 
 import (
 	"banksystem/internal/config"
-	"banksystem/internal/handlers"
+	"banksystem/internal/handler"
 	"banksystem/internal/repositories"
 	"banksystem/internal/services"
 	"database/sql"
@@ -14,21 +14,17 @@ import (
 )
 
 func main() {
-	// Загрузка конфигурации
 	cfg := config.LoadConfig()
 
-	// Подключение к базе данных
 	db, err := sql.Open("postgres", cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer db.Close()
 
-	// Инициализация логгера
 	logger := logrus.New()
 	logger.SetFormatter(&logrus.JSONFormatter{})
 
-	// Инициализация репозиториев
 	userRepo := repositories.NewUserRepository(db)
 	accountRepo := repositories.NewAccountRepository(db)
 	transactionRepo := repositories.NewTransactionRepository(db)
@@ -36,37 +32,29 @@ func main() {
 	creditPaymentRepo := repositories.NewCreditPaymentRepository(db)
 	cardRepo := repositories.NewCardRepository(db)
 
-	// Инициализация SMTP сервиса
 	smtpService := services.NewSMTPService(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUsername, cfg.SMTPPassword)
 
-	// Инициализация JWT сервиса
 	jwtService := services.NewJWTService(cfg.JWTSecret)
 
-	// Инициализация сервисов
 	authService := services.NewAuthService(db, userRepo, jwtService)
 	accountService := services.NewAccountService(db, accountRepo, transactionRepo, userRepo, smtpService)
 	cardService := services.NewCardService(cardRepo, nil)
 	creditService := services.NewCreditService(db, creditRepo, accountRepo, creditPaymentRepo, transactionRepo)
 	creditPaymentService := services.NewCreditPaymentService(db, creditPaymentRepo, creditRepo, accountRepo)
 
-	// Инициализация обработчиков
-	authHandler := handlers.NewAuthHandler(authService)
-	accountHandler := handlers.NewAccountHandler(accountService)
-	cardHandler := handlers.NewCardHandler(cardService)
-	creditHandler := handlers.NewCreditHandler(creditService)
-	creditPaymentHandler := handlers.NewCreditPaymentHandler(creditPaymentService)
+	authHandler := handler.NewAuthHandler(authService)
+	accountHandler := handler.NewAccountHandler(accountService)
+	cardHandler := handler.NewCardHandler(cardService)
+	creditHandler := handler.NewCreditHandler(creditService)
+	creditPaymentHandler := handler.NewCreditPaymentHandler(creditPaymentService)
 
-	// Инициализация middleware
-	authMiddleware := handlers.NewAuthMiddleware(jwtService, logger)
+	authMiddleware := handler.NewAuthMiddleware(jwtService, logger)
 
-	// Настройка маршрутизации
 	mux := http.NewServeMux()
 
-	// Публичные маршруты
 	mux.HandleFunc("/api/register", authHandler.Register)
 	mux.HandleFunc("/api/login", authHandler.Login)
 
-	// Защищенные маршруты
 	protectedMux := http.NewServeMux()
 	protectedMux.HandleFunc("/api/accounts/create", accountHandler.CreateAccount)
 	protectedMux.HandleFunc("/api/accounts/list", accountHandler.GetUserAccounts)
@@ -89,10 +77,8 @@ func main() {
 	protectedMux.HandleFunc("/api/payments/list", creditPaymentHandler.GetPaymentsByCreditID)
 	protectedMux.HandleFunc("/api/payments/pending", creditPaymentHandler.GetPendingPayments)
 
-	// Применяем middleware к защищенным маршрутам
 	mux.Handle("/api/", authMiddleware.Middleware(protectedMux))
 
-	// Запуск сервера
 	logger.Printf("Starting server on port %s", cfg.Port)
 	if err := http.ListenAndServe(":"+cfg.Port, mux); err != nil {
 		logger.Fatalf("Failed to start server: %v", err)

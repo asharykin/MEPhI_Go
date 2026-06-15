@@ -1,7 +1,7 @@
 package services
 
 import (
-	"banksystem/internal/models"
+	"banksystem/internal/model"
 	"banksystem/internal/repositories"
 	"context"
 	"database/sql"
@@ -33,14 +33,14 @@ func NewAccountService(
 	}
 }
 
-func (s *AccountService) CreateAccount(ctx context.Context, userID int64, accountType string) (*models.Account, error) {
+func (s *AccountService) CreateAccount(ctx context.Context, userID int64, accountType string) (*model.Account, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %v", err)
 	}
 	defer tx.Rollback()
 
-	account := &models.Account{
+	account := &model.Account{
 		UserID:    userID,
 		Type:      accountType,
 		Balance:   0,
@@ -61,7 +61,7 @@ func (s *AccountService) CreateAccount(ctx context.Context, userID int64, accoun
 	return account, nil
 }
 
-func (s *AccountService) GetUserAccounts(ctx context.Context, userID int64) ([]*models.Account, error) {
+func (s *AccountService) GetUserAccounts(ctx context.Context, userID int64) ([]*model.Account, error) {
 	accounts, err := s.accountRepo.GetByUserID(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user accounts: %v", err)
@@ -96,7 +96,7 @@ func (s *AccountService) Deposit(ctx context.Context, accountID int64, amount fl
 		return fmt.Errorf("failed to update account: %v", err)
 	}
 
-	transaction := &models.Transaction{
+	transaction := &model.Transaction{
 		AccountID: accountID,
 		Type:      "deposit",
 		Amount:    amount,
@@ -147,7 +147,7 @@ func (s *AccountService) Withdraw(ctx context.Context, accountID int64, amount f
 		return fmt.Errorf("failed to update account: %v", err)
 	}
 
-	transaction := &models.Transaction{
+	transaction := &model.Transaction{
 		AccountID: accountID,
 		Type:      "withdraw",
 		Amount:    amount,
@@ -216,7 +216,7 @@ func (s *AccountService) Transfer(ctx context.Context, fromAccountID, toAccountI
 		return fmt.Errorf("failed to update destination account: %v", err)
 	}
 
-	transaction := &models.Transaction{
+	transaction := &model.Transaction{
 		AccountID:   fromAccountID,
 		Type:        "transfer",
 		Amount:      amount,

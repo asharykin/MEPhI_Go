@@ -1,7 +1,7 @@
-package handlers
+package handler
 
 import (
-	"banksystem/internal/models"
+	"banksystem/internal/model"
 	"banksystem/internal/services"
 	"encoding/json"
 	"net/http"
@@ -17,7 +17,7 @@ func NewAccountHandler(service *services.AccountService) *AccountHandler {
 }
 
 func (h *AccountHandler) CreateAccount(w http.ResponseWriter, r *http.Request) {
-	var req models.AccountCreateRequest
+	var req model.AccountCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

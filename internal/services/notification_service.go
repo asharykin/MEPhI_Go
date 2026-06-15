@@ -19,7 +19,7 @@ type NotificationService struct {
 func NewNotificationService() *NotificationService {
 	return &NotificationService{
 		smtpHost:     os.Getenv("SMTP_HOST"),
-		smtpPort:     587, // Стандартный порт для TLS
+		smtpPort:     587,
 		smtpUser:     os.Getenv("SMTP_USER"),
 		smtpPassword: os.Getenv("SMTP_PASSWORD"),
 	}

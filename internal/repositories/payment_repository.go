@@ -1,7 +1,7 @@
 package repositories
 
 import (
-	"banksystem/internal/models"
+	"banksystem/internal/model"
 	"database/sql"
 	"time"
 )
@@ -14,7 +14,7 @@ func NewPaymentRepository(db *sql.DB) *PaymentRepository {
 	return &PaymentRepository{db: db}
 }
 
-func (r *PaymentRepository) Create(tx *sql.Tx, payment *models.Payment) error {
+func (r *PaymentRepository) Create(tx *sql.Tx, payment *model.Payment) error {
 	query := `
 		INSERT INTO payments (credit_id, amount, due_date, status, created_at)
 		VALUES ($1, $2, $3, $4, $5)
@@ -33,14 +33,14 @@ func (r *PaymentRepository) Create(tx *sql.Tx, payment *models.Payment) error {
 	return err
 }
 
-func (r *PaymentRepository) GetByID(id int64) (*models.Payment, error) {
+func (r *PaymentRepository) GetByID(id int64) (*model.Payment, error) {
 	query := `
 		SELECT id, credit_id, amount, due_date, status, created_at
 		FROM payments
 		WHERE id = $1
 	`
 
-	payment := &models.Payment{}
+	payment := &model.Payment{}
 	err := r.db.QueryRow(query, id).Scan(
 		&payment.ID,
 		&payment.CreditID,
@@ -57,7 +57,7 @@ func (r *PaymentRepository) GetByID(id int64) (*models.Payment, error) {
 	return payment, err
 }
 
-func (r *PaymentRepository) GetByCreditID(creditID int64) ([]*models.Payment, error) {
+func (r *PaymentRepository) GetByCreditID(creditID int64) ([]*model.Payment, error) {
 	query := `
 		SELECT id, credit_id, amount, due_date, status, created_at
 		FROM payments
@@ -71,9 +71,9 @@ func (r *PaymentRepository) GetByCreditID(creditID int64) ([]*models.Payment, er
 	}
 	defer rows.Close()
 
-	var payments []*models.Payment
+	var payments []*model.Payment
 	for rows.Next() {
-		payment := &models.Payment{}
+		payment := &model.Payment{}
 		err := rows.Scan(
 			&payment.ID,
 			&payment.CreditID,
@@ -91,7 +91,7 @@ func (r *PaymentRepository) GetByCreditID(creditID int64) ([]*models.Payment, er
 	return payments, rows.Err()
 }
 
-func (r *PaymentRepository) GetPendingPayments() ([]*models.Payment, error) {
+func (r *PaymentRepository) GetPendingPayments() ([]*model.Payment, error) {
 	query := `
 		SELECT id, credit_id, amount, due_date, status, created_at
 		FROM payments
@@ -105,9 +105,9 @@ func (r *PaymentRepository) GetPendingPayments() ([]*models.Payment, error) {
 	}
 	defer rows.Close()
 
-	var payments []*models.Payment
+	var payments []*model.Payment
 	for rows.Next() {
-		payment := &models.Payment{}
+		payment := &model.Payment{}
 		err := rows.Scan(
 			&payment.ID,
 			&payment.CreditID,

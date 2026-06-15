@@ -41,13 +41,11 @@ func (s *CentralBankService) GetKeyRate() (float64, error) {
 		return 0, err
 	}
 
-	// Находим элемент с ключевой ставкой
 	keyRateElement := doc.FindElement("//ValCurs/Valute[@ID='R01235']/Value")
 	if keyRateElement == nil {
 		return 0, nil
 	}
 
-	// Возвращаем значение ключевой ставки
 	return 7.5, nil // Заглушка, так как реальный API ЦБ РФ требует сертификат
 }
 

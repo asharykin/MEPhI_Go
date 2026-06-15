@@ -1,4 +1,4 @@
-package models
+package model
 
 import (
 	"banksystem/internal/crypto"
@@ -58,7 +58,6 @@ func (c *Card) ToResponse(cardNumber, expiryDate string) CardResponse {
 	}
 }
 
-// EncryptCardData шифрует данные карты
 func (c *Card) EncryptCardData() error {
 	encrypted, err := crypto.EncryptCardData(c.CardNumber, c.ExpiryDate.Format("01/06"))
 	if err != nil {
@@ -69,7 +68,6 @@ func (c *Card) EncryptCardData() error {
 	return nil
 }
 
-// DecryptCardData расшифровывает данные карты
 func (c *Card) DecryptCardData() error {
 	if !crypto.VerifyHMAC(c.EncryptedData, c.HMAC) {
 		return fmt.Errorf("неверный HMAC")
@@ -90,7 +88,6 @@ func (c *Card) DecryptCardData() error {
 	return nil
 }
 
-// SetCVV хеширует CVV код
 func (c *Card) SetCVV(cvv string) error {
 	hashed, err := crypto.HashCVV(cvv)
 	if err != nil {
@@ -100,7 +97,6 @@ func (c *Card) SetCVV(cvv string) error {
 	return nil
 }
 
-// VerifyCVV проверяет CVV код
 func (c *Card) VerifyCVV(cvv string) bool {
 	return crypto.VerifyCVV(c.HashedCVV, cvv)
 }

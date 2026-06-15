@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	JWTSecret = "your-secret-key" // TODO: Вынести в конфиг
+	JWTSecret = "your-secret-key"
 )
 
 func AuthMiddleware(next http.Handler) http.Handler {

@@ -1,4 +1,4 @@
-package models
+package model
 
 import (
 	"regexp"
@@ -27,7 +27,6 @@ func ValidateAmount(amount float64) bool {
 }
 
 func ValidateCardNumber(number string) bool {
-	// Удаляем пробелы и проверяем длину
 	number = strings.ReplaceAll(number, " ", "")
 	return len(number) == 16
 }
@@ -37,7 +36,6 @@ func ValidateCVV(cvv string) bool {
 }
 
 func ValidateExpiryDate(date string) bool {
-	// Формат MM/YY
 	parts := strings.Split(date, "/")
 	if len(parts) != 2 {
 		return false

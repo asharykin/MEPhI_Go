@@ -1,7 +1,7 @@
 package repositories
 
 import (
-	"banksystem/internal/models"
+	"banksystem/internal/model"
 	"context"
 	"database/sql"
 )
@@ -14,7 +14,7 @@ func NewTransactionRepository(db *sql.DB) *TransactionRepository {
 	return &TransactionRepository{db: db}
 }
 
-func (r *TransactionRepository) Create(ctx context.Context, tx *sql.Tx, transaction *models.Transaction) (*models.Transaction, error) {
+func (r *TransactionRepository) Create(ctx context.Context, tx *sql.Tx, transaction *model.Transaction) (*model.Transaction, error) {
 	query := `
 		INSERT INTO transactions (account_id, type, amount, status, to_account_id, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6)
@@ -39,14 +39,14 @@ func (r *TransactionRepository) Create(ctx context.Context, tx *sql.Tx, transact
 	return transaction, nil
 }
 
-func (r *TransactionRepository) GetByID(ctx context.Context, id int64) (*models.Transaction, error) {
+func (r *TransactionRepository) GetByID(ctx context.Context, id int64) (*model.Transaction, error) {
 	query := `
 		SELECT id, account_id, type, amount, status, to_account_id, created_at
 		FROM transactions
 		WHERE id = $1
 	`
 
-	transaction := &models.Transaction{}
+	transaction := &model.Transaction{}
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&transaction.ID,
 		&transaction.AccountID,
@@ -64,7 +64,7 @@ func (r *TransactionRepository) GetByID(ctx context.Context, id int64) (*models.
 	return transaction, err
 }
 
-func (r *TransactionRepository) GetByAccountID(ctx context.Context, accountID int64) ([]*models.Transaction, error) {
+func (r *TransactionRepository) GetByAccountID(ctx context.Context, accountID int64) ([]*model.Transaction, error) {
 	query := `
 		SELECT id, account_id, type, amount, status, to_account_id, created_at
 		FROM transactions
@@ -78,9 +78,9 @@ func (r *TransactionRepository) GetByAccountID(ctx context.Context, accountID in
 	}
 	defer rows.Close()
 
-	var transactions []*models.Transaction
+	var transactions []*model.Transaction
 	for rows.Next() {
-		transaction := &models.Transaction{}
+		transaction := &model.Transaction{}
 		err := rows.Scan(
 			&transaction.ID,
 			&transaction.AccountID,

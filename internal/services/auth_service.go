@@ -1,12 +1,13 @@
 package services
 
 import (
-	"banksystem/internal/models"
+	"banksystem/internal/model"
 	"banksystem/internal/repositories"
 	"context"
 	"database/sql"
-	"golang.org/x/crypto/bcrypt"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthService struct {
@@ -24,31 +25,27 @@ func NewAuthService(db *sql.DB, userRepo *repositories.UserRepository, jwtServic
 }
 
 func (s *AuthService) Register(ctx context.Context, username, email, password string) error {
-	// Проверяем существование email
 	exists, err := s.userRepo.CheckEmailExists(ctx, email)
 	if err != nil {
 		return err
 	}
 	if exists {
-		return models.ErrEmailAlreadyExists
+		return model.ErrEmailAlreadyExists
 	}
 
-	// Хешируем пароль
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
 
-	// Начинаем транзакцию
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	// Создаем пользователя
 	now := time.Now()
-	user := &models.User{
+	user := &model.User{
 		Username:     username,
 		Email:        email,
 		PasswordHash: string(hashedPassword),
@@ -67,12 +64,12 @@ func (s *AuthService) Register(ctx context.Context, username, email, password st
 func (s *AuthService) Login(ctx context.Context, email, password string) (string, error) {
 	user, err := s.userRepo.GetByEmail(ctx, email)
 	if err != nil {
-		return "", models.ErrInvalidCredentials
+		return "", model.ErrInvalidCredentials
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 	if err != nil {
-		return "", models.ErrInvalidCredentials
+		return "", model.ErrInvalidCredentials
 	}
 
 	token, err := s.jwtService.GenerateToken(int64(user.ID))

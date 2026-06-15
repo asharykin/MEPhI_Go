@@ -1,7 +1,7 @@
 package repositories
 
 import (
-	"banksystem/internal/models"
+	"banksystem/internal/model"
 	"database/sql"
 	"time"
 )
@@ -16,7 +16,7 @@ func NewCreditRepository(db *sql.DB) *CreditRepository {
 	}
 }
 
-func (r *CreditRepository) Create(credit *models.Credit) error {
+func (r *CreditRepository) Create(credit *model.Credit) error {
 	query := `
 		INSERT INTO credits (user_id, amount, term_months, interest_rate, status, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6)
@@ -40,14 +40,14 @@ func (r *CreditRepository) Create(credit *models.Credit) error {
 	return nil
 }
 
-func (r *CreditRepository) GetByID(id int) (*models.Credit, error) {
+func (r *CreditRepository) GetByID(id int) (*model.Credit, error) {
 	query := `
 		SELECT id, user_id, amount, term_months, interest_rate, status, created_at
 		FROM credits
 		WHERE id = $1
 	`
 
-	credit := &models.Credit{}
+	credit := &model.Credit{}
 	err := r.db.QueryRow(query, id).Scan(
 		&credit.ID,
 		&credit.UserID,
@@ -68,7 +68,7 @@ func (r *CreditRepository) GetByID(id int) (*models.Credit, error) {
 	return credit, nil
 }
 
-func (r *CreditRepository) GetByUserID(userID int) ([]*models.Credit, error) {
+func (r *CreditRepository) GetByUserID(userID int) ([]*model.Credit, error) {
 	query := `
 		SELECT id, user_id, amount, term_months, interest_rate, status, created_at
 		FROM credits
@@ -82,9 +82,9 @@ func (r *CreditRepository) GetByUserID(userID int) ([]*models.Credit, error) {
 	}
 	defer rows.Close()
 
-	var credits []*models.Credit
+	var credits []*model.Credit
 	for rows.Next() {
-		credit := &models.Credit{}
+		credit := &model.Credit{}
 		err := rows.Scan(
 			&credit.ID,
 			&credit.UserID,

@@ -1,7 +1,7 @@
 package repositories
 
 import (
-	"banksystem/internal/models"
+	"banksystem/internal/model"
 	"context"
 	"database/sql"
 )
@@ -16,7 +16,7 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 	}
 }
 
-func (r *UserRepository) Create(ctx context.Context, tx *sql.Tx, user *models.User) (*models.User, error) {
+func (r *UserRepository) Create(ctx context.Context, tx *sql.Tx, user *model.User) (*model.User, error) {
 	query := `
 		INSERT INTO users (username, email, password_hash, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5)
@@ -43,14 +43,14 @@ func (r *UserRepository) Create(ctx context.Context, tx *sql.Tx, user *models.Us
 	return user, nil
 }
 
-func (r *UserRepository) GetByID(ctx context.Context, id int64) (*models.User, error) {
+func (r *UserRepository) GetByID(ctx context.Context, id int64) (*model.User, error) {
 	query := `
 		SELECT id, username, email, password_hash, created_at, updated_at
 		FROM users
 		WHERE id = $1
 	`
 
-	user := &models.User{}
+	user := &model.User{}
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&user.ID,
 		&user.Username,
@@ -70,14 +70,14 @@ func (r *UserRepository) GetByID(ctx context.Context, id int64) (*models.User, e
 	return user, nil
 }
 
-func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.User, error) {
+func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*model.User, error) {
 	query := `
 		SELECT id, username, email, password_hash, created_at, updated_at
 		FROM users
 		WHERE email = $1
 	`
 
-	user := &models.User{}
+	user := &model.User{}
 	err := r.db.QueryRowContext(ctx, query, email).Scan(
 		&user.ID,
 		&user.Username,

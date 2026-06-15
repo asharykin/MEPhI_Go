@@ -12,7 +12,6 @@ import (
 )
 
 func main() {
-	// Создаем новую сущность PGP
 	entity, err := openpgp.NewEntity("Bank System", "bank@example.com", "", &packet.Config{
 		DefaultHash:   crypto.SHA256,
 		DefaultCipher: packet.CipherAES256,
@@ -22,7 +21,6 @@ func main() {
 		log.Fatalf("Ошибка при создании PGP сущности: %v", err)
 	}
 
-	// Сохраняем публичный ключ
 	pubKeyFile, err := os.Create("key.pem")
 	if err != nil {
 		log.Fatalf("Ошибка при создании файла публичного ключа: %v", err)
@@ -42,7 +40,6 @@ func main() {
 		log.Fatalf("Ошибка при сохранении публичного ключа: %v", err)
 	}
 
-	// Сохраняем приватный ключ
 	privKeyFile, err := os.Create("key.priv.pem")
 	if err != nil {
 		log.Fatalf("Ошибка при создании файла приватного ключа: %v", err)

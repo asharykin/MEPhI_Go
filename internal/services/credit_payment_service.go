@@ -1,7 +1,7 @@
 package services
 
 import (
-	"banksystem/internal/models"
+	"banksystem/internal/model"
 	"banksystem/internal/repositories"
 	"context"
 	"database/sql"
@@ -29,8 +29,8 @@ func NewCreditPaymentService(
 	}
 }
 
-func (s *CreditPaymentService) CreatePayment(ctx context.Context, creditID int64, amount float64, dueDate time.Time) (*models.CreditPayment, error) {
-	payment := &models.CreditPayment{
+func (s *CreditPaymentService) CreatePayment(ctx context.Context, creditID int64, amount float64, dueDate time.Time) (*model.CreditPayment, error) {
+	payment := &model.CreditPayment{
 		CreditID: creditID,
 		Amount:   amount,
 		Status:   "pending",
@@ -75,7 +75,6 @@ func (s *CreditPaymentService) ProcessPayment(ctx context.Context, paymentID int
 		return s.paymentRepo.UpdateStatus(ctx, paymentID, "failed")
 	}
 
-	// Списываем средства со счета
 	account.Balance -= payment.Amount
 	err = s.accountRepo.Update(ctx, tx, account)
 	if err != nil {
@@ -90,11 +89,11 @@ func (s *CreditPaymentService) ProcessPayment(ctx context.Context, paymentID int
 	return tx.Commit()
 }
 
-func (s *CreditPaymentService) GetPaymentsByCreditID(ctx context.Context, creditID int64) ([]*models.CreditPayment, error) {
+func (s *CreditPaymentService) GetPaymentsByCreditID(ctx context.Context, creditID int64) ([]*model.CreditPayment, error) {
 	return s.paymentRepo.GetByCreditID(ctx, creditID)
 }
 
-func (s *CreditPaymentService) GetPendingPayments(ctx context.Context) ([]*models.CreditPayment, error) {
+func (s *CreditPaymentService) GetPendingPayments(ctx context.Context) ([]*model.CreditPayment, error) {
 	return s.paymentRepo.GetPending(ctx)
 }
 

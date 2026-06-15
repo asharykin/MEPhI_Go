@@ -1,7 +1,7 @@
 package repositories
 
 import (
-	"banksystem/internal/models"
+	"banksystem/internal/model"
 	"context"
 	"database/sql"
 )
@@ -14,7 +14,7 @@ func NewAccountRepository(db *sql.DB) *AccountRepository {
 	return &AccountRepository{db: db}
 }
 
-func (r *AccountRepository) Create(ctx context.Context, tx *sql.Tx, account *models.Account) (*models.Account, error) {
+func (r *AccountRepository) Create(ctx context.Context, tx *sql.Tx, account *model.Account) (*model.Account, error) {
 	query := `
 		INSERT INTO accounts (user_id, balance, type, is_active, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6)
@@ -39,14 +39,14 @@ func (r *AccountRepository) Create(ctx context.Context, tx *sql.Tx, account *mod
 	return account, nil
 }
 
-func (r *AccountRepository) GetByID(ctx context.Context, id int64) (*models.Account, error) {
+func (r *AccountRepository) GetByID(ctx context.Context, id int64) (*model.Account, error) {
 	query := `
 		SELECT id, user_id, balance, type, is_active, created_at, updated_at
 		FROM accounts
 		WHERE id = $1
 	`
 
-	account := &models.Account{}
+	account := &model.Account{}
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&account.ID,
 		&account.UserID,
@@ -64,7 +64,7 @@ func (r *AccountRepository) GetByID(ctx context.Context, id int64) (*models.Acco
 	return account, err
 }
 
-func (r *AccountRepository) GetByUserID(ctx context.Context, userID int64) ([]*models.Account, error) {
+func (r *AccountRepository) GetByUserID(ctx context.Context, userID int64) ([]*model.Account, error) {
 	query := `
 		SELECT id, user_id, balance, type, is_active, created_at, updated_at
 		FROM accounts
@@ -77,9 +77,9 @@ func (r *AccountRepository) GetByUserID(ctx context.Context, userID int64) ([]*m
 	}
 	defer rows.Close()
 
-	var accounts []*models.Account
+	var accounts []*model.Account
 	for rows.Next() {
-		account := &models.Account{}
+		account := &model.Account{}
 		err := rows.Scan(
 			&account.ID,
 			&account.UserID,
@@ -98,7 +98,7 @@ func (r *AccountRepository) GetByUserID(ctx context.Context, userID int64) ([]*m
 	return accounts, rows.Err()
 }
 
-func (r *AccountRepository) Update(ctx context.Context, tx *sql.Tx, account *models.Account) error {
+func (r *AccountRepository) Update(ctx context.Context, tx *sql.Tx, account *model.Account) error {
 	query := `
 		UPDATE accounts
 		SET balance = $1,

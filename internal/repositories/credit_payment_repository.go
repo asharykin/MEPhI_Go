@@ -1,7 +1,7 @@
 package repositories
 
 import (
-	"banksystem/internal/models"
+	"banksystem/internal/model"
 	"context"
 	"database/sql"
 	"time"
@@ -15,7 +15,7 @@ func NewCreditPaymentRepository(db *sql.DB) *CreditPaymentRepository {
 	return &CreditPaymentRepository{db: db}
 }
 
-func (r *CreditPaymentRepository) Create(ctx context.Context, payment *models.CreditPayment) error {
+func (r *CreditPaymentRepository) Create(ctx context.Context, payment *model.CreditPayment) error {
 	query := `
 		INSERT INTO credit_payments (credit_id, amount, status, due_date)
 		VALUES ($1, $2, $3, $4)
@@ -30,14 +30,14 @@ func (r *CreditPaymentRepository) Create(ctx context.Context, payment *models.Cr
 	).Scan(&payment.ID, &payment.CreatedAt)
 }
 
-func (r *CreditPaymentRepository) GetByID(ctx context.Context, id int64) (*models.CreditPayment, error) {
+func (r *CreditPaymentRepository) GetByID(ctx context.Context, id int64) (*model.CreditPayment, error) {
 	query := `
 		SELECT id, credit_id, amount, status, due_date, created_at
 		FROM credit_payments
 		WHERE id = $1
 	`
 
-	payment := &models.CreditPayment{}
+	payment := &model.CreditPayment{}
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&payment.ID,
 		&payment.CreditID,
@@ -54,7 +54,7 @@ func (r *CreditPaymentRepository) GetByID(ctx context.Context, id int64) (*model
 	return payment, err
 }
 
-func (r *CreditPaymentRepository) GetByCreditID(ctx context.Context, creditID int64) ([]*models.CreditPayment, error) {
+func (r *CreditPaymentRepository) GetByCreditID(ctx context.Context, creditID int64) ([]*model.CreditPayment, error) {
 	query := `
 		SELECT id, credit_id, amount, status, due_date, created_at
 		FROM credit_payments
@@ -68,9 +68,9 @@ func (r *CreditPaymentRepository) GetByCreditID(ctx context.Context, creditID in
 	}
 	defer rows.Close()
 
-	var payments []*models.CreditPayment
+	var payments []*model.CreditPayment
 	for rows.Next() {
-		payment := &models.CreditPayment{}
+		payment := &model.CreditPayment{}
 		err := rows.Scan(
 			&payment.ID,
 			&payment.CreditID,
@@ -88,7 +88,7 @@ func (r *CreditPaymentRepository) GetByCreditID(ctx context.Context, creditID in
 	return payments, nil
 }
 
-func (r *CreditPaymentRepository) GetPending(ctx context.Context) ([]*models.CreditPayment, error) {
+func (r *CreditPaymentRepository) GetPending(ctx context.Context) ([]*model.CreditPayment, error) {
 	query := `
 		SELECT id, credit_id, amount, status, due_date, created_at
 		FROM credit_payments
@@ -102,9 +102,9 @@ func (r *CreditPaymentRepository) GetPending(ctx context.Context) ([]*models.Cre
 	}
 	defer rows.Close()
 
-	var payments []*models.CreditPayment
+	var payments []*model.CreditPayment
 	for rows.Next() {
-		payment := &models.CreditPayment{}
+		payment := &model.CreditPayment{}
 		err := rows.Scan(
 			&payment.ID,
 			&payment.CreditID,
