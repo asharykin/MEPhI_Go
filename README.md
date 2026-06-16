@@ -61,9 +61,9 @@ go run cmd/api/main.go
   Тело запроса:
   ```json
   {
-    "username": "имя_пользователя",
+    "username": "user1",
     "email": "email@example.com",
-    "password": "пароль"
+    "password": "123456"
   }
   ```
 
@@ -73,7 +73,7 @@ go run cmd/api/main.go
   ```json
   {
     "email": "email@example.com",
-    "password": "пароль"
+    "password": "123456"
   }
   ```
   Возвращает JWT токен для авторизованных запросов.
