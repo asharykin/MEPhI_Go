@@ -3,6 +3,7 @@ package main
 import (
 	"banksystem/internal/config"
 	"banksystem/internal/handler"
+	"banksystem/internal/middleware"
 	"banksystem/internal/repository"
 	"banksystem/internal/service"
 	"database/sql"
@@ -48,7 +49,7 @@ func main() {
 	creditHandler := handler.NewCreditHandler(creditService)
 	creditPaymentHandler := handler.NewCreditPaymentHandler(creditPaymentService)
 
-	authMiddleware := handler.NewAuthMiddleware(jwtService, logger)
+	authMiddleware := middleware.NewAuthMiddleware(jwtService, logger)
 
 	mux := http.NewServeMux()
 

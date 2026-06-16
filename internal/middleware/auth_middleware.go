@@ -1,6 +1,7 @@
-package handler
+package middleware
 
 import (
+	"banksystem/internal/handler"
 	"banksystem/internal/service"
 	"context"
 	"net/http"
@@ -9,10 +10,10 @@ import (
 
 type AuthMiddleware struct {
 	jwtService *service.JWTService
-	logger     Logger
+	logger     handler.Logger
 }
 
-func NewAuthMiddleware(jwtService *service.JWTService, logger Logger) *AuthMiddleware {
+func NewAuthMiddleware(jwtService *service.JWTService, logger handler.Logger) *AuthMiddleware {
 	return &AuthMiddleware{
 		jwtService: jwtService,
 		logger:     logger,
