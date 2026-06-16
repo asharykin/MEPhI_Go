@@ -203,24 +203,6 @@ go run cmd/api/main.go
 - Формат: JSON
 - Выход: файл и консоль
 
-## Структура проекта
-
-```
-.
-├── cmd/
-│   └── api/
-│       └── main.go
-├── internal/
-│   ├── handlers/
-│   ├── models/
-│   ├── repositories/
-│   ├── services/
-│   └── utils/
-├── migrations/
-├── scripts/
-└── README.md
-```
-
 ## Технические детали
 
 - Используется PostgreSQL с расширением pgcrypto
