@@ -24,7 +24,7 @@ go mod download
 3. Настройка переменных окружения:
 ```bash
 export DB_HOST=localhost
-export DB_PORT=5432
+export DB_PORT=5433
 export DB_USER=postgres
 export DB_PASSWORD=your_password
 export DB_NAME=bank
