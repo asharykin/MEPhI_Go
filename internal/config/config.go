@@ -16,7 +16,7 @@ type Config struct {
 
 func LoadConfig() *Config {
 	return &Config{
-		DatabaseURL:  getEnv("DATABASE_URL", "postgres://bank_user:bank_password@localhost:5432/bank_db?sslmode=disable"),
+		DatabaseURL:  getEnv("DATABASE_URL", "postgres://bank_user:bank_password@localhost:5433/bank_db?sslmode=disable"),
 		Port:         getEnv("PORT", "8080"),
 		JWTSecret:    getEnv("JWT_SECRET", "your-secret-key"),
 		SMTPHost:     getEnv("SMTP_HOST", "smtp.gmail.com"),
