@@ -20,18 +20,18 @@ type AccountCreateRequest struct {
 	Type   string `json:"type" validate:"required,oneof=checking savings credit"`
 }
 
+type AccountTransferRequest struct {
+	FromAccountID int     `json:"from_account_id" validate:"required"`
+	ToAccountID   int     `json:"to_account_id" validate:"required"`
+	Amount        float64 `json:"amount" validate:"required,gt=0"`
+}
+
 type AccountResponse struct {
 	ID        int64     `json:"id"`
 	UserID    int64     `json:"user_id"`
 	Balance   float64   `json:"balance"`
 	Type      string    `json:"type"`
 	CreatedAt time.Time `json:"created_at"`
-}
-
-type AccountTransferRequest struct {
-	FromAccountID int     `json:"from_account_id" validate:"required"`
-	ToAccountID   int     `json:"to_account_id" validate:"required"`
-	Amount        float64 `json:"amount" validate:"required,gt=0"`
 }
 
 func (a *AccountCreateRequest) Validate() error {
