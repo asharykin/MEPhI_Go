@@ -22,6 +22,7 @@ func (r *CreditRepository) Create(credit *model.Credit) error {
 		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id
 	`
+
 	err := r.db.QueryRow(
 		query,
 		credit.UserID,
@@ -31,9 +32,11 @@ func (r *CreditRepository) Create(credit *model.Credit) error {
 		credit.Status,
 		time.Now(),
 	).Scan(&credit.ID)
+
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -43,6 +46,7 @@ func (r *CreditRepository) GetByID(id int) (*model.Credit, error) {
 		FROM credits
 		WHERE id = $1
 	`
+
 	credit := &model.Credit{}
 	err := r.db.QueryRow(query, id).Scan(
 		&credit.ID,
@@ -53,12 +57,15 @@ func (r *CreditRepository) GetByID(id int) (*model.Credit, error) {
 		&credit.Status,
 		&credit.CreatedAt,
 	)
+
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
 	}
+
 	if err != nil {
 		return nil, err
 	}
+
 	return credit, nil
 }
 
@@ -69,6 +76,7 @@ func (r *CreditRepository) GetByUserID(userID int) ([]*model.Credit, error) {
 		WHERE user_id = $1
 		ORDER BY created_at DESC
 	`
+
 	rows, err := r.db.Query(query, userID)
 	if err != nil {
 		return nil, err
@@ -92,6 +100,7 @@ func (r *CreditRepository) GetByUserID(userID int) ([]*model.Credit, error) {
 		}
 		credits = append(credits, credit)
 	}
+
 	return credits, nil
 }
 
@@ -101,9 +110,11 @@ func (r *CreditRepository) UpdateStatus(id int, status string) error {
 		SET status = $1
 		WHERE id = $2
 	`
+
 	_, err := r.db.Exec(query, status, id)
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
