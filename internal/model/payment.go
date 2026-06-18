@@ -2,6 +2,8 @@ package model
 
 import "time"
 
+const ()
+
 type Payment struct {
 	ID        int64     `json:"id"`
 	CreditID  int64     `json:"credit_id"`
@@ -26,8 +28,8 @@ type PaymentResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-func (p *Payment) ToResponse() PaymentResponse {
-	return PaymentResponse{
+func (p *Payment) ToResponse() *PaymentResponse {
+	return &PaymentResponse{
 		ID:        p.ID,
 		CreditID:  p.CreditID,
 		Amount:    p.Amount,

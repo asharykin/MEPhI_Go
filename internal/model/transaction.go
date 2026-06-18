@@ -5,6 +5,17 @@ import (
 	"time"
 )
 
+const (
+	TransactionTypeDeposit    = "DEPOSIT"
+	TransactionTypeWithdrawal = "WITHDRAWAL"
+	TransactionTypeTransfer   = "TRANSFER"
+	TransactionTypePayment    = "PAYMENT"
+
+	TransactionStatusPending   = "PENDING"
+	TransactionStatusCompleted = "COMPLETED"
+	TransactionStatusFailed    = "FAILED"
+)
+
 type Transaction struct {
 	ID          int64         `json:"id"`
 	AccountID   int64         `json:"account_id"`
@@ -31,17 +42,6 @@ type TransactionResponse struct {
 	ToAccountID int64     `json:"to_account_id,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
 }
-
-const (
-	TransactionTypeDeposit    = "DEPOSIT"
-	TransactionTypeWithdrawal = "WITHDRAWAL"
-	TransactionTypeTransfer   = "TRANSFER"
-	TransactionTypePayment    = "PAYMENT"
-
-	TransactionStatusPending   = "PENDING"
-	TransactionStatusCompleted = "COMPLETED"
-	TransactionStatusFailed    = "FAILED"
-)
 
 func (t *Transaction) ToResponse() TransactionResponse {
 	var toAccountID int64

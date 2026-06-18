@@ -17,47 +17,6 @@ type Card struct {
 	CreatedAt     time.Time `json:"created_at"`
 }
 
-type CardCreateRequest struct {
-	AccountID  int64  `json:"account_id" validate:"required"`
-	CardNumber string `json:"card_number" validate:"required"`
-	ExpiryDate string `json:"expiry_date" validate:"required"`
-	CVV        string `json:"cvv" validate:"required"`
-}
-
-type CardResponse struct {
-	ID         int64     `json:"id"`
-	AccountID  int64     `json:"account_id"`
-	CardNumber string    `json:"card_number"` // Расшифрованный номер карты
-	ExpiryDate string    `json:"expiry_date"` // Расшифрованная дата
-	CreatedAt  time.Time `json:"created_at"`
-}
-
-func (c *CardCreateRequest) Validate() error {
-	if c.AccountID <= 0 {
-		return ErrInvalidAccountID
-	}
-	if !ValidateCardNumber(c.CardNumber) {
-		return ErrInvalidCardNumber
-	}
-	if !ValidateExpiryDate(c.ExpiryDate) {
-		return ErrInvalidExpiryDate
-	}
-	if !ValidateCVV(c.CVV) {
-		return ErrInvalidCVV
-	}
-	return nil
-}
-
-func (c *Card) ToResponse(cardNumber, expiryDate string) CardResponse {
-	return CardResponse{
-		ID:         c.ID,
-		AccountID:  c.AccountID,
-		CardNumber: cardNumber,
-		ExpiryDate: expiryDate,
-		CreatedAt:  c.CreatedAt,
-	}
-}
-
 func (c *Card) EncryptCardData() error {
 	encrypted, err := crypto.EncryptCardData(c.CardNumber, c.ExpiryDate.Format("01/06"))
 	if err != nil {
@@ -99,4 +58,45 @@ func (c *Card) SetCVV(cvv string) error {
 
 func (c *Card) VerifyCVV(cvv string) bool {
 	return crypto.VerifyCVV(c.HashedCVV, cvv)
+}
+
+type CardCreateRequest struct {
+	AccountID  int64  `json:"account_id" validate:"required"`
+	CardNumber string `json:"card_number" validate:"required"`
+	ExpiryDate string `json:"expiry_date" validate:"required"`
+	CVV        string `json:"cvv" validate:"required"`
+}
+
+func (c *CardCreateRequest) Validate() error {
+	if c.AccountID <= 0 {
+		return ErrInvalidAccountID
+	}
+	if !ValidateCardNumber(c.CardNumber) {
+		return ErrInvalidCardNumber
+	}
+	if !ValidateExpiryDate(c.ExpiryDate) {
+		return ErrInvalidExpiryDate
+	}
+	if !ValidateCVV(c.CVV) {
+		return ErrInvalidCVV
+	}
+	return nil
+}
+
+type CardResponse struct {
+	ID         int64     `json:"id"`
+	AccountID  int64     `json:"account_id"`
+	CardNumber string    `json:"card_number"` // Расшифрованный номер карты
+	ExpiryDate string    `json:"expiry_date"` // Расшифрованная дата
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+func (c *Card) ToResponse(cardNumber, expiryDate string) *CardResponse {
+	return &CardResponse{
+		ID:         c.ID,
+		AccountID:  c.AccountID,
+		CardNumber: cardNumber,
+		ExpiryDate: expiryDate,
+		CreatedAt:  c.CreatedAt,
+	}
 }

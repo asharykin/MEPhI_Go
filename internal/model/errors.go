@@ -3,9 +3,6 @@ package model
 import "errors"
 
 var (
-	// Общие ошибки
-	ErrInvalidID = errors.New("неверный ID")
-
 	// Ошибки пользователя
 	ErrInvalidUserID      = errors.New("неверный ID пользователя")
 	ErrInvalidUsername    = errors.New("неверное имя пользователя")
@@ -39,8 +36,4 @@ var (
 	ErrInvalidPaymentID   = errors.New("неверный ID платежа")
 	ErrInvalidPaymentDate = errors.New("неверная дата платежа")
 	ErrPaymentNotFound    = errors.New("платеж не найден")
-
-	// Ошибки репозитория
-	ErrNotFound      = errors.New("запись не найдена")
-	ErrAlreadyExists = errors.New("запись уже существует")
 )

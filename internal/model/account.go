@@ -5,6 +5,12 @@ import (
 	"time"
 )
 
+const (
+	AccountTypeChecking = "checking"
+	AccountTypeDebit    = "savings"
+	AccountTypeCredit   = "credit"
+)
+
 type Account struct {
 	ID        int64        `json:"id"`
 	UserID    int64        `json:"user_id"`
@@ -20,20 +26,6 @@ type AccountCreateRequest struct {
 	Type   string `json:"type" validate:"required,oneof=checking savings credit"`
 }
 
-type AccountTransferRequest struct {
-	FromAccountID int     `json:"from_account_id" validate:"required"`
-	ToAccountID   int     `json:"to_account_id" validate:"required"`
-	Amount        float64 `json:"amount" validate:"required,gt=0"`
-}
-
-type AccountResponse struct {
-	ID        int64     `json:"id"`
-	UserID    int64     `json:"user_id"`
-	Balance   float64   `json:"balance"`
-	Type      string    `json:"type"`
-	CreatedAt time.Time `json:"created_at"`
-}
-
 func (a *AccountCreateRequest) Validate() error {
 	if a.UserID <= 0 {
 		return ErrInvalidUserID
@@ -42,6 +34,12 @@ func (a *AccountCreateRequest) Validate() error {
 		return ErrInvalidAccountType
 	}
 	return nil
+}
+
+type AccountTransferRequest struct {
+	FromAccountID int     `json:"from_account_id" validate:"required"`
+	ToAccountID   int     `json:"to_account_id" validate:"required"`
+	Amount        float64 `json:"amount" validate:"required,gt=0"`
 }
 
 func (a *AccountTransferRequest) Validate() error {
@@ -54,8 +52,16 @@ func (a *AccountTransferRequest) Validate() error {
 	return nil
 }
 
-func (a *Account) ToResponse() AccountResponse {
-	return AccountResponse{
+type AccountResponse struct {
+	ID        int64     `json:"id"`
+	UserID    int64     `json:"user_id"`
+	Balance   float64   `json:"balance"`
+	Type      string    `json:"type"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func (a *Account) ToResponse() *AccountResponse {
+	return &AccountResponse{
 		ID:        a.ID,
 		UserID:    a.UserID,
 		Balance:   a.Balance,
