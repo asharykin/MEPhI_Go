@@ -1,8 +1,8 @@
 INSERT INTO users (username, email, password_hash) VALUES
 ('test_user', 'test@example.com', '$2a$10$X7Q8Y9Z0A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q7R8S9T0U1V2W3X4Y5Z');
 
-INSERT INTO accounts (user_id, balance) VALUES
-(1, 10000.00);
+INSERT INTO accounts (user_id, balance, type) VALUES
+(1, 10000.00, 'SAVINGS');
 
 INSERT INTO cards (account_id, card_number, expiry_date, cvv_hash, hmac) VALUES
 (1, 
