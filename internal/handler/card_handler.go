@@ -21,24 +21,24 @@ func NewCardHandler(cardService service.CardService) *CardHandler {
 func (h *CardHandler) CreateCard(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
-		http.Error(w, `{"error":"Unauthorized"}`, http.StatusUnauthorized)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	var req dto.CreateCardRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"error":"Invalid request body"}`, http.StatusBadRequest)
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 	if err := req.Validate(); err != nil {
-		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	resp, err := h.cardService.CreateCard(r.Context(), userID, &req)
 	if err != nil {
 		logger.Error("Failed to create card via handler", "error", err, "user_id", userID)
-		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -50,14 +50,14 @@ func (h *CardHandler) CreateCard(w http.ResponseWriter, r *http.Request) {
 func (h *CardHandler) GetCards(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
-		http.Error(w, `{"error":"Unauthorized"}`, http.StatusUnauthorized)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	cards, err := h.cardService.GetCardsByUserID(r.Context(), userID)
 	if err != nil {
 		logger.Error("Failed to get cards via handler", "error", err, "user_id", userID)
-		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	fmt.Println("Cards retrieved successfully via handler for user_id:", userID, cards)

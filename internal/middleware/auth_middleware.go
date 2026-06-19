@@ -17,7 +17,7 @@ func AuthMiddleware(jwtSecret []byte) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authHeader := r.Header.Get("Authorization")
 			if authHeader == "" {
-				http.Error(w, `{"error":"Authorization header required"}`, http.StatusUnauthorized)
+				http.Error(w, "Authorization header required", http.StatusUnauthorized)
 				return
 			}
 
@@ -30,12 +30,12 @@ func AuthMiddleware(jwtSecret []byte) func(http.Handler) http.Handler {
 				})
 
 			if err != nil || !token.Valid {
-				http.Error(w, `{"error":"Invalid token"}`, http.StatusUnauthorized)
+				http.Error(w, "Invalid token", http.StatusUnauthorized)
 				return
 			}
 
 			if claims.Subject == "" {
-				http.Error(w, `{"error":"Invalid token subject"}`, http.StatusUnauthorized)
+				http.Error(w, "Invalid token subject", http.StatusUnauthorized)
 				return
 			}
 

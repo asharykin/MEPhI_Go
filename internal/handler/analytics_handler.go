@@ -20,7 +20,7 @@ func NewAnalyticsHandler(analyticsService service.AnalyticsService) *AnalyticsHa
 func (h *AnalyticsHandler) GetAnalytics(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
-		http.Error(w, `{"error":"Unauthorized"}`, http.StatusUnauthorized)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -36,7 +36,7 @@ func (h *AnalyticsHandler) GetAnalytics(w http.ResponseWriter, r *http.Request) 
 	resp, err := h.analyticsService.GetAnalytics(r.Context(), userID, days)
 	if err != nil {
 		logger.Error("Failed to get analytics via handler", "error", err, "user_id", userID)
-		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
