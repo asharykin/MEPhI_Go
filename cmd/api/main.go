@@ -74,27 +74,27 @@ func main() {
 
 	r.Use(middleware.LoggingMiddleware)
 
-	r.HandleFunc("/register", userHandler.Register).Methods("POST")
-	r.HandleFunc("/login", userHandler.Login).Methods("POST")
+	r.HandleFunc("/api/register", userHandler.Register).Methods("POST")
+	r.HandleFunc("/api/login", userHandler.Login).Methods("POST")
 
 	authRouter := r.PathPrefix("/").Subrouter()
 	authRouter.Use(middleware.AuthMiddleware([]byte(cfg.JWT.Secret)))
 
-	authRouter.HandleFunc("/accounts", accountHandler.CreateAccount).Methods("POST")
-	authRouter.HandleFunc("/accounts", accountHandler.GetAccounts).Methods("GET")
-	authRouter.HandleFunc("/accounts/{id}/deposit", accountHandler.Deposit).Methods("POST")
-	authRouter.HandleFunc("/accounts/{id}/withdraw", accountHandler.Withdraw).Methods("POST")
-	authRouter.HandleFunc("/accounts/{id}/predict", accountHandler.PredictBalance).Methods("GET")
+	authRouter.HandleFunc("/api/accounts", accountHandler.CreateAccount).Methods("POST")
+	authRouter.HandleFunc("/api/accounts", accountHandler.GetAccounts).Methods("GET")
+	authRouter.HandleFunc("/api/accounts/{id}/deposit", accountHandler.Deposit).Methods("POST")
+	authRouter.HandleFunc("/api/accounts/{id}/withdraw", accountHandler.Withdraw).Methods("POST")
+	authRouter.HandleFunc("/api/accounts/{id}/predict", accountHandler.PredictBalance).Methods("GET")
 
-	authRouter.HandleFunc("/cards", cardHandler.CreateCard).Methods("POST")
-	authRouter.HandleFunc("/cards", cardHandler.GetCards).Methods("GET")
+	authRouter.HandleFunc("/api/cards", cardHandler.CreateCard).Methods("POST")
+	authRouter.HandleFunc("/api/cards", cardHandler.GetCards).Methods("GET")
 
-	authRouter.HandleFunc("/transfer", transactionHandler.Transfer).Methods("POST")
+	authRouter.HandleFunc("/api/transfer", transactionHandler.Transfer).Methods("POST")
 
-	authRouter.HandleFunc("/credits", creditHandler.CreateCredit).Methods("POST")
-	authRouter.HandleFunc("/credits/{id}/schedule", creditHandler.GetSchedule).Methods("GET")
+	authRouter.HandleFunc("/api/credits", creditHandler.CreateCredit).Methods("POST")
+	authRouter.HandleFunc("/api/credits/{id}/schedule", creditHandler.GetSchedule).Methods("GET")
 
-	authRouter.HandleFunc("/analytics", analyticsHandler.GetAnalytics).Methods("GET")
+	authRouter.HandleFunc("/api/analytics", analyticsHandler.GetAnalytics).Methods("GET")
 
 	port := os.Getenv("PORT")
 	if port == "" {

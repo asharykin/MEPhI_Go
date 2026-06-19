@@ -79,19 +79,19 @@ SMTP_PASS=your_email_password
 
 ### Публичные
 
-- `POST /register` - Регистрация нового пользователя
-- `POST /login` - Авторизация пользователя
+- `POST /api/register` - Регистрация нового пользователя
+- `POST /api/login` - Авторизация пользователя
 
 ### Защищенные (требуют `Authorization: Bearer <token>`)
 
-- `POST /accounts` - Создать счет
-- `GET /accounts` - Получить список счетов
-- `POST /accounts/deposit` - Пополнить баланс
-- `POST /accounts/withdraw` - Списать средства
-- `POST /cards` - Выпустить виртуальную карту
-- `GET /cards` - Получить список своих карт
-- `POST /transfer` - Перевод средств
-- `POST /credits` - Оформление кредита
-- `GET /credits/{creditId}/schedule` - График платежей по кредиту
-- `GET /analytics` - Аналитика доходов и расходов пользователя
-- `GET /accounts/{accountId}/predict` - Прогноз баланса на N дней
+- `POST /api/accounts` - Создать счет
+- `GET /api/accounts` - Получить список счетов
+- `POST /api/accounts/{id}/deposit` - Пополнить баланс
+- `POST /api/accounts/{id}/withdraw` - Списать средства
+- `GET /api/accounts/{id}/predict` - Прогноз баланса на N дней
+- `POST /api/cards` - Выпустить виртуальную карту
+- `GET /api/cards` - Получить список своих карт
+- `POST /api/transfer` - Перевод средств
+- `POST /api/credits` - Оформление кредита
+- `GET /api/credits/{id}/schedule` - График платежей по кредиту
+- `GET /api/analytics` - Аналитика доходов и расходов пользователя
