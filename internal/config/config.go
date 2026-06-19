@@ -33,7 +33,7 @@ type SecurityConfig struct {
 	PGPPrivateKey string
 }
 
-func LoadConfig() *Config {
+func NewConfig() *Config {
 	return &Config{
 		Database: loadDatabaseConfig(),
 		JWT:      loadJWTConfig(),

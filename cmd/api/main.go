@@ -9,7 +9,6 @@ import (
 	"banksystem/internal/service"
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"time"
@@ -21,11 +20,11 @@ func main() {
 	logger.Init()
 	logger.Info("Starting Bank Service API")
 
-	cfg := config.LoadConfig()
+	cfg := config.NewConfig()
 
 	storage, err := repository.NewStorage(cfg.Database.ConnectionString)
 	if err != nil {
-		logger.Fatal("Failed to connect to database: %v", err)
+		logger.Fatal("Failed to connect to database", "error", err)
 	}
 	defer storage.Close()
 
@@ -131,6 +130,6 @@ func main() {
 	}
 
 	if err := srv.ListenAndServe(); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+		logger.Fatal("Failed to start server", "error", err)
 	}
 }
