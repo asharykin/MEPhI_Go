@@ -15,18 +15,20 @@ func NewCardRepository(db *sql.DB) *CardRepository {
 
 func (r *CardRepository) Create(card *model.Card) error {
 	query := `
-		INSERT INTO cards (account_id, encrypted_data, hashed_cvv, hmac, created_at)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO cards (account_id, card_number, expiry_date, cvv_hash, hmac, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id
 	`
 
 	return r.db.QueryRow(
 		query,
 		card.AccountID,
-		card.EncryptedData,
+		card.CardNumber,
+		card.ExpiryDate,
 		card.HashedCVV,
 		card.HMAC,
 		card.CreatedAt,
+		card.UpdatedAt,
 	).Scan(&card.ID)
 }
 
@@ -34,7 +36,7 @@ func (r *CardRepository) GetByID(id int64) (*model.Card, error) {
 	card := &model.Card{}
 
 	query := `
-		SELECT id, account_id, encrypted_data, hashed_cvv, hmac, created_at
+		SELECT id, account_id, card_number, expiry_date, cvv_hash, hmac, created_at, updated_at
 		FROM cards
 		WHERE id = $1
 	`
@@ -42,10 +44,12 @@ func (r *CardRepository) GetByID(id int64) (*model.Card, error) {
 	err := r.db.QueryRow(query, id).Scan(
 		&card.ID,
 		&card.AccountID,
-		&card.EncryptedData,
+		&card.CardNumber,
+		&card.ExpiryDate,
 		&card.HashedCVV,
 		&card.HMAC,
 		&card.CreatedAt,
+		&card.UpdatedAt,
 	)
 
 	if err == sql.ErrNoRows {

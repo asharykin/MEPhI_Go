@@ -15,6 +15,7 @@ type Card struct {
 	HashedCVV     string    `json:"hashed_cvv"`
 	HMAC          string    `json:"hmac"`
 	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 func (c *Card) EncryptCardData() error {
