@@ -21,6 +21,7 @@ type Credit struct {
 	MonthlyPayment float64   `json:"monthly_payment" db:"monthly_payment"`
 	Status         string    `json:"status" db:"status"`
 	CreatedAt      time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 type CreditCreateRequest struct {

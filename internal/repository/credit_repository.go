@@ -18,8 +18,8 @@ func NewCreditRepository(db *sql.DB) *CreditRepository {
 
 func (r *CreditRepository) Create(credit *model.Credit) error {
 	query := `
-		INSERT INTO credits (user_id, amount, term_months, interest_rate, status, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO credits (user_id, amount, term_months, interest_rate, status, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id
 	`
 
@@ -30,6 +30,7 @@ func (r *CreditRepository) Create(credit *model.Credit) error {
 		credit.TermMonths,
 		credit.InterestRate,
 		credit.Status,
+		time.Now(),
 		time.Now(),
 	).Scan(&credit.ID)
 
@@ -42,7 +43,7 @@ func (r *CreditRepository) Create(credit *model.Credit) error {
 
 func (r *CreditRepository) GetByID(id int) (*model.Credit, error) {
 	query := `
-		SELECT id, user_id, amount, term_months, interest_rate, status, created_at
+		SELECT id, user_id, amount, term_months, interest_rate, status, created_at, updated_at
 		FROM credits
 		WHERE id = $1
 	`
@@ -56,6 +57,7 @@ func (r *CreditRepository) GetByID(id int) (*model.Credit, error) {
 		&credit.InterestRate,
 		&credit.Status,
 		&credit.CreatedAt,
+		&credit.UpdatedAt,
 	)
 
 	if err == sql.ErrNoRows {
@@ -71,7 +73,7 @@ func (r *CreditRepository) GetByID(id int) (*model.Credit, error) {
 
 func (r *CreditRepository) GetByUserID(userID int) ([]*model.Credit, error) {
 	query := `
-		SELECT id, user_id, amount, term_months, interest_rate, status, created_at
+		SELECT id, user_id, amount, term_months, interest_rate, status, created_at, updated_at
 		FROM credits
 		WHERE user_id = $1
 		ORDER BY created_at DESC
@@ -94,6 +96,7 @@ func (r *CreditRepository) GetByUserID(userID int) ([]*model.Credit, error) {
 			&credit.InterestRate,
 			&credit.Status,
 			&credit.CreatedAt,
+			&credit.UpdatedAt,
 		)
 		if err != nil {
 			return nil, err

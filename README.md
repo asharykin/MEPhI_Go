@@ -85,7 +85,7 @@ go run cmd/api/main.go
   Тело запроса:
   ```json
   {
-    "type": "DEBIT"
+    "type": "savings"
   }
   ```
 

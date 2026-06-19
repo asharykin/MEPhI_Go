@@ -4,13 +4,6 @@ import (
 	"time"
 )
 
-const (
-	PaymentStatusPending = "PENDING"
-	PaymentStatusPaid    = "PAID"
-	PaymentStatusOverdue = "OVERDUE"
-	PaymentStatusFailed  = "FAILED"
-)
-
 type PaymentSchedule struct {
 	ID          int       `json:"id"`
 	CreditID    int       `json:"credit_id"`

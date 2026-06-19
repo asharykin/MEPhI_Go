@@ -2,7 +2,11 @@ package model
 
 import "time"
 
-const ()
+const (
+	PaymentStatusCompleted = "pending"
+	PaymentStatusPaid      = "paid"
+	PaymentStatusOverdue   = "overdue"
+)
 
 type Payment struct {
 	ID        int64     `json:"id"`

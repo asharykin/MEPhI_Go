@@ -53,16 +53,16 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/api/register", authHandler.Register)
-	mux.HandleFunc("/api/login", authHandler.Login)
+	mux.HandleFunc("POST /api/register", authHandler.Register)
+	mux.HandleFunc("POST /api/login", authHandler.Login)
 
 	protectedMux := http.NewServeMux()
-	protectedMux.HandleFunc("/api/accounts/create", accountHandler.CreateAccount)
-	protectedMux.HandleFunc("/api/accounts/list", accountHandler.GetUserAccounts)
+	protectedMux.HandleFunc("POST /api/accounts/create", accountHandler.CreateAccount)
+	protectedMux.HandleFunc("GET /api/accounts/list", accountHandler.GetUserAccounts)
 	protectedMux.HandleFunc("/api/accounts/balance", accountHandler.GetBalance)
-	protectedMux.HandleFunc("/api/accounts/deposit", accountHandler.Deposit)
-	protectedMux.HandleFunc("/api/accounts/withdraw", accountHandler.Withdraw)
-	protectedMux.HandleFunc("/api/accounts/transfer", accountHandler.Transfer)
+	protectedMux.HandleFunc("POST /api/accounts/deposit", accountHandler.Deposit)
+	protectedMux.HandleFunc("POST /api/accounts/withdraw", accountHandler.Withdraw)
+	protectedMux.HandleFunc("POST /api/accounts/transfer", accountHandler.Transfer)
 
 	protectedMux.HandleFunc("/api/cards/create", cardHandler.CreateCard)
 	protectedMux.HandleFunc("/api/cards/list", cardHandler.GetUserCards)
