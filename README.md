@@ -30,7 +30,7 @@ REST API для банковского сервиса на языке Go, при
 
 ## Переменные окружения
 
-Перед запуском приложения необходимо настроить переменные окружения и создать файлы pgp_public.key и pgp_private.key в которых будут публичный и приватный pgp ключи.
+Перед запуском приложения необходимо настроить переменные окружения и поместить в папку resources файлы pgp_public.key и pgp_private.key, в которых будут публичный и приватный pgp-ключи.
 
 Пример переменных окружения:
 
@@ -39,8 +39,8 @@ PORT=8080
 
 DB_URL=postgres://bank_user:bank_password@localhost:5433/bank_db?sslmode=disable
 
-JWT_SECRET=your_jwt_secret_key_here
-HMAC_SECRET=your_hmac_secret_key_here
+JWT_SECRET=your_jwt_secret_key
+HMAC_SECRET=your_hmac_secret_key
 
 SMTP_HOST=smtp.example.com
 SMTP_PORT=587

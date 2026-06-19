@@ -50,7 +50,7 @@ func loadDatabaseConfig() *DatabaseConfig {
 
 func loadJWTConfig() *JWTConfig {
 	return &JWTConfig{
-		Secret: getEnv("JWT_SECRET", "super-secret-key-change-in-production"),
+		Secret: getEnv("JWT_SECRET", "your_jwt_secret_key"),
 	}
 }
 
@@ -73,7 +73,7 @@ func loadSecurityConfig() *SecurityConfig {
 		panic("Failed to read PGP private key file")
 	}
 	return &SecurityConfig{
-		HMACSecret:    getEnv("HMAC_SECRET", "hmac-secret-key-change-in-production"),
+		HMACSecret:    getEnv("HMAC_SECRET", "your_hmac_secret_key"),
 		PGPPublicKey:  string(public_data),
 		PGPPrivateKey: string(private_data),
 	}
