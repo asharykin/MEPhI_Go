@@ -64,11 +64,11 @@ func loadSMTPConfig() *SMTPConfig {
 }
 
 func loadSecurityConfig() *SecurityConfig {
-	public_data, err := os.ReadFile("./pgp_public.key")
+	public_data, err := os.ReadFile("./resources/pgp_public.key")
 	if err != nil {
 		panic("Failed to read PGP key file")
 	}
-	private_data, err := os.ReadFile("./pgp_private.key")
+	private_data, err := os.ReadFile("./resources/pgp_private.key")
 	if err != nil {
 		panic("Failed to read PGP private key file")
 	}
