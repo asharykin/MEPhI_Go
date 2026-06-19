@@ -1,9 +1,9 @@
 package repository
 
 import (
+	"banksystem/internal/logger"
 	"database/sql"
 	"fmt"
-	"log"
 
 	_ "github.com/lib/pq"
 )
@@ -23,7 +23,7 @@ func NewStorage(dsn string) (*Storage, error) {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	log.Println("Successfully connected to the database")
+	logger.Info("Successfully connected to the database")
 
 	return &Storage{DB: db}, nil
 }

@@ -25,22 +25,35 @@ func Init() {
 	Log.SetLevel(parsedLevel)
 }
 
-func Info(args ...any) {
-	Log.Info(args...)
+func withFields(kv ...any) *logrus.Entry {
+	fields := logrus.Fields{}
+	for i := 0; i < len(kv); i += 2 {
+		if i+1 < len(kv) {
+			key, ok := kv[i].(string)
+			if ok {
+				fields[key] = kv[i+1]
+			}
+		}
+	}
+	return Log.WithFields(fields)
 }
 
-func Error(args ...any) {
-	Log.Error(args...)
+func Fatal(msg string, kv ...any) {
+	withFields(kv...).Fatal(msg)
 }
 
-func Fatal(args ...any) {
-	Log.Fatal(args...)
+func Error(msg string, kv ...any) {
+	withFields(kv...).Error(msg)
 }
 
-func Warn(args ...any) {
-	Log.Warn(args...)
+func Info(msg string, kv ...any) {
+	withFields(kv...).Info(msg)
 }
 
-func Debug(args ...any) {
-	Log.Debug(args...)
+func Warn(msg string, kv ...any) {
+	withFields(kv...).Warn(msg)
+}
+
+func Debug(msg string, kv ...any) {
+	withFields(kv...).Debug(msg)
 }
