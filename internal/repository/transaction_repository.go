@@ -7,22 +7,15 @@ import (
 	"database/sql"
 )
 
-type TransactionRepository interface {
-	Create(ctx context.Context, transaction *model.Transaction) error
-	GetBySenderID(ctx context.Context, senderID string) ([]*model.Transaction, error)
-	GetByReceiverID(ctx context.Context, receiverID string) ([]*model.Transaction, error)
-	CreateTx(ctx context.Context, tx *sql.Tx, transaction *model.Transaction) error
-}
-
-type TransactionRepositoryImpl struct {
+type TransactionRepository struct {
 	Storage *Storage
 }
 
-func NewTransactionRepository(storage *Storage) TransactionRepository {
-	return &TransactionRepositoryImpl{Storage: storage}
+func NewTransactionRepository(storage *Storage) *TransactionRepository {
+	return &TransactionRepository{Storage: storage}
 }
 
-func (r *TransactionRepositoryImpl) Create(ctx context.Context, transaction *model.Transaction) error {
+func (r *TransactionRepository) Create(ctx context.Context, transaction *model.Transaction) error {
 	query := `INSERT INTO transactions (id, sender_id, receiver_id, amount, type, description, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`
 	_, err := r.Storage.DB.ExecContext(ctx, query, transaction.ID, transaction.SenderID, transaction.ReceiverID, transaction.Amount, transaction.Type, transaction.Description, transaction.CreatedAt)
 	if err != nil {
@@ -32,7 +25,7 @@ func (r *TransactionRepositoryImpl) Create(ctx context.Context, transaction *mod
 	return nil
 }
 
-func (r *TransactionRepositoryImpl) GetBySenderID(ctx context.Context, senderID string) ([]*model.Transaction, error) {
+func (r *TransactionRepository) GetBySenderID(ctx context.Context, senderID string) ([]*model.Transaction, error) {
 	rows, err := r.Storage.DB.QueryContext(ctx, `SELECT id, sender_id, receiver_id, amount, type, description, created_at FROM transactions WHERE sender_id = $1`, senderID)
 	if err != nil {
 		logger.Error("Failed to get transactions by sender ID from DB", "error", err, "sender_id", senderID)
@@ -56,7 +49,7 @@ func (r *TransactionRepositoryImpl) GetBySenderID(ctx context.Context, senderID 
 	return transactions, nil
 }
 
-func (r *TransactionRepositoryImpl) GetByReceiverID(ctx context.Context, receiverID string) ([]*model.Transaction, error) {
+func (r *TransactionRepository) GetByReceiverID(ctx context.Context, receiverID string) ([]*model.Transaction, error) {
 	rows, err := r.Storage.DB.QueryContext(ctx, `SELECT id, sender_id, receiver_id, amount, type, description, created_at FROM transactions WHERE receiver_id = $1`, receiverID)
 	if err != nil {
 		logger.Error("Failed to get transactions by receiver ID from DB", "error", err, "receiver_id", receiverID)
@@ -80,7 +73,7 @@ func (r *TransactionRepositoryImpl) GetByReceiverID(ctx context.Context, receive
 	return transactions, nil
 }
 
-func (r *TransactionRepositoryImpl) CreateTx(ctx context.Context, tx *sql.Tx, transaction *model.Transaction) error {
+func (r *TransactionRepository) CreateTx(ctx context.Context, tx *sql.Tx, transaction *model.Transaction) error {
 	query := `INSERT INTO transactions (id, sender_id, receiver_id, amount, type, description, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`
 	_, err := tx.ExecContext(ctx, query, transaction.ID, transaction.SenderID, transaction.ReceiverID, transaction.Amount, transaction.Type, transaction.Description, transaction.CreatedAt)
 	if err != nil {

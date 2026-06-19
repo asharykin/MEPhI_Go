@@ -22,8 +22,8 @@ import (
 )
 
 type CardService struct {
-	cardRepo    repository.CardRepository
-	accountRepo repository.AccountRepository
+	cardRepo    *repository.CardRepository
+	accountRepo *repository.AccountRepository
 	hmacSecret  []byte
 
 	publicEntity  *openpgp.Entity
@@ -31,8 +31,8 @@ type CardService struct {
 }
 
 func NewCardService(
-	cardRepo repository.CardRepository,
-	accountRepo repository.AccountRepository,
+	cardRepo *repository.CardRepository,
+	accountRepo *repository.AccountRepository,
 	hmacSecret string,
 	publicKey string,
 	privateKey string,

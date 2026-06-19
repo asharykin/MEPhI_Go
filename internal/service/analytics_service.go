@@ -10,17 +10,17 @@ import (
 )
 
 type AnalyticsService struct {
-	transactionRepo     repository.TransactionRepository
-	creditRepo          repository.CreditRepository
-	accountRepo         repository.AccountRepository
-	paymentScheduleRepo repository.PaymentScheduleRepository
+	transactionRepo     *repository.TransactionRepository
+	creditRepo          *repository.CreditRepository
+	accountRepo         *repository.AccountRepository
+	paymentScheduleRepo *repository.PaymentScheduleRepository
 }
 
 func NewAnalyticsService(
-	transactionRepo repository.TransactionRepository,
-	creditRepo repository.CreditRepository,
-	accountRepo repository.AccountRepository,
-	paymentScheduleRepo repository.PaymentScheduleRepository,
+	transactionRepo *repository.TransactionRepository,
+	creditRepo *repository.CreditRepository,
+	accountRepo *repository.AccountRepository,
+	paymentScheduleRepo *repository.PaymentScheduleRepository,
 ) *AnalyticsService {
 	return &AnalyticsService{
 		transactionRepo:     transactionRepo,

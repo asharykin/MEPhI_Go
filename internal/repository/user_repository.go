@@ -12,22 +12,15 @@ import (
 
 var ErrUniqueViolation = errors.New("unique constraint violation")
 
-type UserRepository interface {
-	Create(ctx context.Context, user *model.User) error
-	GetByEmail(ctx context.Context, email string) (*model.User, error)
-	GetByUsername(ctx context.Context, username string) (*model.User, error)
-	GetByID(ctx context.Context, id string) (*model.User, error)
-}
-
-type userRepository struct {
+type UserRepository struct {
 	storage *Storage
 }
 
-func NewUserRepository(storage *Storage) UserRepository {
-	return &userRepository{storage: storage}
+func NewUserRepository(storage *Storage) *UserRepository {
+	return &UserRepository{storage: storage}
 }
 
-func (r *userRepository) Create(ctx context.Context, user *model.User) error {
+func (r *UserRepository) Create(ctx context.Context, user *model.User) error {
 	query := `INSERT INTO users (id, username, email, password_hash, created_at) VALUES ($1, $2, $3, $4, $5)`
 	_, err := r.storage.DB.ExecContext(ctx, query, user.ID, user.Username, user.Email, user.PasswordHash, user.CreatedAt)
 	if err != nil {
@@ -41,7 +34,7 @@ func (r *userRepository) Create(ctx context.Context, user *model.User) error {
 	return nil
 }
 
-func (r *userRepository) GetByEmail(ctx context.Context, email string) (*model.User, error) {
+func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*model.User, error) {
 	var user model.User
 	query := `SELECT id, username, email, password_hash, created_at FROM users WHERE email = $1`
 	err := r.storage.DB.QueryRowContext(ctx, query, email).Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.CreatedAt)
@@ -55,7 +48,7 @@ func (r *userRepository) GetByEmail(ctx context.Context, email string) (*model.U
 	return &user, nil
 }
 
-func (r *userRepository) GetByUsername(ctx context.Context, username string) (*model.User, error) {
+func (r *UserRepository) GetByUsername(ctx context.Context, username string) (*model.User, error) {
 	var user model.User
 	query := `SELECT id, username, email, password_hash, created_at FROM users WHERE username = $1`
 	err := r.storage.DB.QueryRowContext(ctx, query, username).Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.CreatedAt)
@@ -69,7 +62,7 @@ func (r *userRepository) GetByUsername(ctx context.Context, username string) (*m
 	return &user, nil
 }
 
-func (r *userRepository) GetByID(ctx context.Context, id string) (*model.User, error) {
+func (r *UserRepository) GetByID(ctx context.Context, id string) (*model.User, error) {
 	var user model.User
 	query := `SELECT id, username, email, password_hash, created_at FROM users WHERE id = $1`
 	err := r.storage.DB.QueryRowContext(ctx, query, id).Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.CreatedAt)

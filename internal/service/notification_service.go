@@ -8,19 +8,15 @@ import (
 	"github.com/go-mail/mail/v2"
 )
 
-type EmailService interface {
-	SendPaymentNotification(to string, amount float64) error
-}
-
-type emailService struct {
+type NotificationService struct {
 	smtpHost string
 	smtpPort int
 	smtpUser string
 	smtpPass string
 }
 
-func NewEmailService(smtpHost string, smtpPort int, smtpUser string, smtpPass string) EmailService {
-	return &emailService{
+func NewNotificationService(smtpHost string, smtpPort int, smtpUser string, smtpPass string) *NotificationService {
+	return &NotificationService{
 		smtpHost: smtpHost,
 		smtpPort: smtpPort,
 		smtpUser: smtpUser,
@@ -28,7 +24,7 @@ func NewEmailService(smtpHost string, smtpPort int, smtpUser string, smtpPass st
 	}
 }
 
-func (s *emailService) SendPaymentNotification(to string, amount float64) error {
+func (s *NotificationService) SendPaymentNotification(to string, amount float64) error {
 	content := fmt.Sprintf(`
         <h1>Спасибо за оплату!</h1>
         <p>Сумма: <strong>%.2f RUB</strong></p>

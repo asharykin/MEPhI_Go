@@ -13,12 +13,12 @@ import (
 )
 
 type AccountService struct {
-	accountRepo         repository.AccountRepository
-	creditRepo          repository.CreditRepository
-	paymentScheduleRepo repository.PaymentScheduleRepository
+	accountRepo         *repository.AccountRepository
+	creditRepo          *repository.CreditRepository
+	paymentScheduleRepo *repository.PaymentScheduleRepository
 }
 
-func NewAccountService(accountRepo repository.AccountRepository, creditRepo repository.CreditRepository, paymentScheduleRepo repository.PaymentScheduleRepository) *AccountService {
+func NewAccountService(accountRepo *repository.AccountRepository, creditRepo *repository.CreditRepository, paymentScheduleRepo *repository.PaymentScheduleRepository) *AccountService {
 	return &AccountService{
 		accountRepo:         accountRepo,
 		creditRepo:          creditRepo,

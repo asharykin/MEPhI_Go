@@ -11,17 +11,17 @@ import (
 	"github.com/beevik/etree"
 )
 
-type CentralBankKeyRateProvider struct {
+type CentralBankService struct {
 	client *http.Client
 }
 
-func NewCentralBankKeyRateProvider() *CentralBankKeyRateProvider {
-	return &CentralBankKeyRateProvider{
+func NewCentralBankService() *CentralBankService {
+	return &CentralBankService{
 		client: &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
-func (p *CentralBankKeyRateProvider) GetKeyRate() (float64, error) {
+func (p *CentralBankService) GetKeyRate() (float64, error) {
 	soapRequest := p.buildSOAPRequest()
 	rawBody, err := p.sendRequest(soapRequest)
 	if err != nil {
@@ -39,7 +39,7 @@ func (p *CentralBankKeyRateProvider) GetKeyRate() (float64, error) {
 	return rate, nil
 }
 
-func (p *CentralBankKeyRateProvider) buildSOAPRequest() string {
+func (p *CentralBankService) buildSOAPRequest() string {
 	fromDate := time.Now().AddDate(0, 0, -30).Format("2006-01-02")
 	toDate := time.Now().Format("2006-01-02")
 	return fmt.Sprintf(`<?xml version="1.0" encoding="utf-8"?>
@@ -53,7 +53,7 @@ func (p *CentralBankKeyRateProvider) buildSOAPRequest() string {
         </soap12:Envelope>`, fromDate, toDate)
 }
 
-func (p *CentralBankKeyRateProvider) sendRequest(soapRequest string) ([]byte, error) {
+func (p *CentralBankService) sendRequest(soapRequest string) ([]byte, error) {
 	req, err := http.NewRequest(
 		"POST",
 		"https://www.cbr.ru/DailyInfoWebServ/DailyInfo.asmx",
@@ -79,7 +79,7 @@ func (p *CentralBankKeyRateProvider) sendRequest(soapRequest string) ([]byte, er
 	return rawBody, nil
 }
 
-func (p *CentralBankKeyRateProvider) parseXMLResponse(rawBody []byte) (float64, error) {
+func (p *CentralBankService) parseXMLResponse(rawBody []byte) (float64, error) {
 	doc := etree.NewDocument()
 	if err := doc.ReadFromBytes(rawBody); err != nil {
 		return 0, fmt.Errorf("ошибка парсинга XML: %v", err)

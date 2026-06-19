@@ -35,8 +35,8 @@ func main() {
 	creditRepo := repository.NewCreditRepository(storage)
 	paymentScheduleRepo := repository.NewPaymentScheduleRepository(storage)
 
-	keyRateProvider := service.NewCentralBankKeyRateProvider()
-	emailService := service.NewEmailService(
+	keyRateProvider := service.NewCentralBankService()
+	emailService := service.NewNotificationService(
 		cfg.SMTP.Host,
 		cfg.SMTP.Port,
 		cfg.SMTP.User,

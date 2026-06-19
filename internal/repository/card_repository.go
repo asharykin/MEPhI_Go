@@ -8,21 +8,15 @@ import (
 	"errors"
 )
 
-type CardRepository interface {
-	Create(ctx context.Context, card *model.Card) error
-	GetByUserID(ctx context.Context, userID string) ([]*model.Card, error)
-	GetByID(ctx context.Context, id string) (*model.Card, error)
-}
-
-type cardRepository struct {
+type CardRepository struct {
 	storage *Storage
 }
 
-func NewCardRepository(storage *Storage) CardRepository {
-	return &cardRepository{storage: storage}
+func NewCardRepository(storage *Storage) *CardRepository {
+	return &CardRepository{storage: storage}
 }
 
-func (r *cardRepository) Create(ctx context.Context, card *model.Card) error {
+func (r *CardRepository) Create(ctx context.Context, card *model.Card) error {
 	query := `INSERT INTO cards (id, user_id, account_id, number_encrypted, expiry_encrypted, cvv_hash, hmac, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 	_, err := r.storage.DB.ExecContext(ctx, query, card.ID, card.UserID, card.AccountID, card.NumberEncrypted, card.ExpiryEncrypted, card.CVVHash, card.HMAC, card.CreatedAt)
 	if err != nil {
@@ -32,7 +26,7 @@ func (r *cardRepository) Create(ctx context.Context, card *model.Card) error {
 	return nil
 }
 
-func (r *cardRepository) GetByUserID(ctx context.Context, userID string) ([]*model.Card, error) {
+func (r *CardRepository) GetByUserID(ctx context.Context, userID string) ([]*model.Card, error) {
 	rows, err := r.storage.DB.QueryContext(ctx, `SELECT id, user_id, account_id, number_encrypted, expiry_encrypted, cvv_hash, hmac, created_at FROM cards WHERE user_id = $1`, userID)
 	if err != nil {
 		logger.Error("Failed to get cards by user ID from DB", "error", err, "user_id", userID)
@@ -56,7 +50,7 @@ func (r *cardRepository) GetByUserID(ctx context.Context, userID string) ([]*mod
 	return cards, nil
 }
 
-func (r *cardRepository) GetByID(ctx context.Context, id string) (*model.Card, error) {
+func (r *CardRepository) GetByID(ctx context.Context, id string) (*model.Card, error) {
 	var card model.Card
 	query := `SELECT id, user_id, account_id, number_encrypted, expiry_encrypted, cvv_hash, hmac, created_at FROM cards WHERE id = $1`
 	err := r.storage.DB.QueryRowContext(ctx, query, id).Scan(&card.ID, &card.UserID, &card.AccountID, &card.NumberEncrypted, &card.ExpiryEncrypted, &card.CVVHash, &card.HMAC, &card.CreatedAt)

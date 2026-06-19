@@ -14,28 +14,24 @@ import (
 )
 
 type CreditService struct {
-	creditRepo          repository.CreditRepository
-	paymentScheduleRepo repository.PaymentScheduleRepository
-	accountRepo         repository.AccountRepository
-	transactionRepo     repository.TransactionRepository
-	userRepo            repository.UserRepository
-	keyRateProvider     KeyRateProvider
-	emailService        EmailService
+	creditRepo          *repository.CreditRepository
+	paymentScheduleRepo *repository.PaymentScheduleRepository
+	accountRepo         *repository.AccountRepository
+	transactionRepo     *repository.TransactionRepository
+	userRepo            *repository.UserRepository
+	centralBankService  *CentralBankService
+	notificationService *NotificationService
 	storage             *repository.Storage
 }
 
-type KeyRateProvider interface {
-	GetKeyRate() (float64, error)
-}
-
 func NewCreditService(
-	creditRepo repository.CreditRepository,
-	paymentScheduleRepo repository.PaymentScheduleRepository,
-	accountRepo repository.AccountRepository,
-	transactionRepo repository.TransactionRepository,
-	userRepo repository.UserRepository,
-	keyRateProvider KeyRateProvider,
-	emailService EmailService,
+	creditRepo *repository.CreditRepository,
+	paymentScheduleRepo *repository.PaymentScheduleRepository,
+	accountRepo *repository.AccountRepository,
+	transactionRepo *repository.TransactionRepository,
+	userRepo *repository.UserRepository,
+	centralBankService *CentralBankService,
+	notificationService *NotificationService,
 	storage *repository.Storage,
 ) *CreditService {
 	return &CreditService{
@@ -44,8 +40,8 @@ func NewCreditService(
 		accountRepo:         accountRepo,
 		transactionRepo:     transactionRepo,
 		userRepo:            userRepo,
-		keyRateProvider:     keyRateProvider,
-		emailService:        emailService,
+		centralBankService:  centralBankService,
+		notificationService: notificationService,
 		storage:             storage,
 	}
 }
@@ -57,7 +53,7 @@ func (s *CreditService) CreateCredit(ctx context.Context, userID string, req *dt
 		return nil, err
 	}
 
-	keyRate, err := s.keyRateProvider.GetKeyRate()
+	keyRate, err := s.centralBankService.GetKeyRate()
 	if err != nil {
 		logger.Error("Failed to get key rate for credit creation", "error", err)
 		return nil, fmt.Errorf("failed to get key rate: %w", err)
@@ -240,7 +236,7 @@ func (s *CreditService) ProcessScheduledPayments(ctx context.Context) error {
 				continue
 			}
 
-			if err := s.emailService.SendPaymentNotification(user.Email, penaltyAmount); err != nil {
+			if err := s.notificationService.SendPaymentNotification(user.Email, penaltyAmount); err != nil {
 				logger.Error("Failed to send penalty notification email", "error", err, "user_email", user.Email)
 			}
 
@@ -318,7 +314,7 @@ func (s *CreditService) ProcessScheduledPayments(ctx context.Context) error {
 			continue
 		}
 
-		if err := s.emailService.SendPaymentNotification(user.Email, amountToPay); err != nil {
+		if err := s.notificationService.SendPaymentNotification(user.Email, amountToPay); err != nil {
 			logger.Error("Failed to send payment notification email", "error", err, "user_email", user.Email)
 		}
 

@@ -7,23 +7,15 @@ import (
 	"database/sql"
 )
 
-type PaymentScheduleRepository interface {
-	CreateBatch(ctx context.Context, schedules []*model.PaymentSchedule) error
-	GetUnpaidDue(ctx context.Context, dueDate string) ([]*model.PaymentSchedule, error)
-	UpdatePaidStatus(ctx context.Context, id string, isPaid bool, lateFeeApplied bool) error
-	GetByCreditID(ctx context.Context, creditID string) ([]*model.PaymentSchedule, error)
-	UpdatePaidStatusTx(ctx context.Context, tx *sql.Tx, id string, isPaid bool, lateFeeApplied bool) error
-}
-
-type paymentScheduleRepository struct {
+type PaymentScheduleRepository struct {
 	storage *Storage
 }
 
-func NewPaymentScheduleRepository(storage *Storage) PaymentScheduleRepository {
-	return &paymentScheduleRepository{storage: storage}
+func NewPaymentScheduleRepository(storage *Storage) *PaymentScheduleRepository {
+	return &PaymentScheduleRepository{storage: storage}
 }
 
-func (r *paymentScheduleRepository) CreateBatch(ctx context.Context, schedules []*model.PaymentSchedule) error {
+func (r *PaymentScheduleRepository) CreateBatch(ctx context.Context, schedules []*model.PaymentSchedule) error {
 	tx, err := r.storage.DB.BeginTx(ctx, nil)
 	if err != nil {
 		logger.Error("Failed to begin transaction for batch insert", "error", err)
@@ -53,7 +45,7 @@ func (r *paymentScheduleRepository) CreateBatch(ctx context.Context, schedules [
 	return nil
 }
 
-func (r *paymentScheduleRepository) GetUnpaidDue(ctx context.Context, dueDate string) ([]*model.PaymentSchedule, error) {
+func (r *PaymentScheduleRepository) GetUnpaidDue(ctx context.Context, dueDate string) ([]*model.PaymentSchedule, error) {
 	rows, err := r.storage.DB.QueryContext(ctx, `SELECT id, credit_id, payment_date, amount, is_paid, late_fee_applied FROM payment_schedules WHERE payment_date <= $1 AND is_paid = FALSE`, dueDate)
 	if err != nil {
 		logger.Error("Failed to get unpaid schedules from DB", "error", err, "due_date", dueDate)
@@ -77,7 +69,7 @@ func (r *paymentScheduleRepository) GetUnpaidDue(ctx context.Context, dueDate st
 	return schedules, nil
 }
 
-func (r *paymentScheduleRepository) UpdatePaidStatus(ctx context.Context, id string, isPaid bool, lateFeeApplied bool) error {
+func (r *PaymentScheduleRepository) UpdatePaidStatus(ctx context.Context, id string, isPaid bool, lateFeeApplied bool) error {
 	query := `UPDATE payment_schedules SET is_paid = $1, late_fee_applied = $2 WHERE id = $3`
 	_, err := r.storage.DB.ExecContext(ctx, query, isPaid, lateFeeApplied, id)
 	if err != nil {
@@ -87,7 +79,7 @@ func (r *paymentScheduleRepository) UpdatePaidStatus(ctx context.Context, id str
 	return nil
 }
 
-func (r *paymentScheduleRepository) GetByCreditID(ctx context.Context, creditID string) ([]*model.PaymentSchedule, error) {
+func (r *PaymentScheduleRepository) GetByCreditID(ctx context.Context, creditID string) ([]*model.PaymentSchedule, error) {
 	rows, err := r.storage.DB.QueryContext(ctx, `SELECT id, credit_id, payment_date, amount, is_paid, late_fee_applied FROM payment_schedules WHERE credit_id = $1 ORDER BY payment_date ASC`, creditID)
 	if err != nil {
 		logger.Error("Failed to get payment schedules by credit ID from DB", "error", err, "credit_id", creditID)
@@ -111,7 +103,7 @@ func (r *paymentScheduleRepository) GetByCreditID(ctx context.Context, creditID 
 	return schedules, nil
 }
 
-func (r *paymentScheduleRepository) UpdatePaidStatusTx(ctx context.Context, tx *sql.Tx, id string, isPaid bool, lateFeeApplied bool) error {
+func (r *PaymentScheduleRepository) UpdatePaidStatusTx(ctx context.Context, tx *sql.Tx, id string, isPaid bool, lateFeeApplied bool) error {
 	query := `UPDATE payment_schedules SET is_paid = $1, late_fee_applied = $2 WHERE id = $3`
 	_, err := tx.ExecContext(ctx, query, isPaid, lateFeeApplied, id)
 	if err != nil {
