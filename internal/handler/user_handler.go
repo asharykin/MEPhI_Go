@@ -1,9 +1,9 @@
 package handler
 
 import (
+	"banksystem/internal/dto"
+	"banksystem/internal/service"
 	"encoding/json"
-	"go-banking-service/internal/dto"
-	"go-banking-service/internal/service"
 	"net/http"
 	"strings"
 )

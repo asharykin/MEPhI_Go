@@ -1,14 +1,14 @@
 package service
 
 import (
+	"banksystem/internal/dto"
+	"banksystem/internal/logger"
+	"banksystem/internal/model"
+	"banksystem/internal/repository"
+	"banksystem/internal/util"
 	"context"
 	"errors"
 	"fmt"
-	"go-banking-service/internal/dto"
-	"go-banking-service/internal/logger"
-	"go-banking-service/internal/model"
-	"go-banking-service/internal/repository"
-	"go-banking-service/internal/util"
 	"time"
 )
 

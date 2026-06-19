@@ -1,10 +1,10 @@
 package handler
 
 import (
+	"banksystem/internal/logger"
+	"banksystem/internal/middleware"
+	"banksystem/internal/service"
 	"encoding/json"
-	"go-banking-service/internal/logger"
-	"go-banking-service/internal/middleware"
-	"go-banking-service/internal/service"
 	"net/http"
 	"strconv"
 )

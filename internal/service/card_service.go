@@ -1,17 +1,17 @@
 package service
 
 import (
+	"banksystem/internal/dto"
+	"banksystem/internal/logger"
+	"banksystem/internal/model"
+	"banksystem/internal/repository"
+	"banksystem/internal/util"
 	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"go-banking-service/internal/dto"
-	"go-banking-service/internal/logger"
-	"go-banking-service/internal/model"
-	"go-banking-service/internal/repository"
-	"go-banking-service/internal/util"
 	"io"
 	"math/rand"
 	"time"

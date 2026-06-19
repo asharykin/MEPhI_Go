@@ -1,10 +1,10 @@
 package repository
 
 import (
+	"banksystem/internal/logger"
+	"banksystem/internal/model"
 	"context"
 	"database/sql"
-	"go-banking-service/internal/logger"
-	"go-banking-service/internal/model"
 )
 
 type TransactionRepository interface {

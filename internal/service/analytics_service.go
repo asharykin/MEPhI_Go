@@ -1,11 +1,11 @@
 package service
 
 import (
+	"banksystem/internal/dto"
+	"banksystem/internal/logger"
+	"banksystem/internal/repository"
 	"context"
 	"fmt"
-	"go-banking-service/internal/dto"
-	"go-banking-service/internal/logger"
-	"go-banking-service/internal/repository"
 	"time"
 )
 

@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"go-banking-service/internal/logger"
+	"banksystem/internal/logger"
 )
 
 func LoggingMiddleware(next http.Handler) http.Handler {

@@ -1,9 +1,9 @@
 package service
 
 import (
+	"banksystem/internal/logger"
 	"crypto/tls"
 	"fmt"
-	"go-banking-service/internal/logger"
 
 	"github.com/go-mail/mail/v2"
 )

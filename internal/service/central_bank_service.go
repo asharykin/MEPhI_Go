@@ -1,9 +1,9 @@
 package service
 
 import (
+	"banksystem/internal/logger"
 	"bytes"
 	"fmt"
-	"go-banking-service/internal/logger"
 	"io"
 	"net/http"
 	"time"

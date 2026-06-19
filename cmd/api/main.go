@@ -1,14 +1,14 @@
 package main
 
 import (
+	"banksystem/internal/config"
+	"banksystem/internal/handler"
+	"banksystem/internal/logger"
+	"banksystem/internal/middleware"
+	"banksystem/internal/repository"
+	"banksystem/internal/service"
 	"context"
 	"fmt"
-	"go-banking-service/internal/config"
-	"go-banking-service/internal/handler"
-	"go-banking-service/internal/logger"
-	"go-banking-service/internal/middleware"
-	"go-banking-service/internal/repository"
-	"go-banking-service/internal/service"
 	"log"
 	"net/http"
 	"os"
