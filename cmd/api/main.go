@@ -23,7 +23,7 @@ func main() {
 
 	cfg := config.LoadConfig()
 
-	storage, err := repository.NewStorage(cfg.Database.GetConnectionString())
+	storage, err := repository.NewStorage(cfg.Database.ConnectionString)
 	if err != nil {
 		logger.Fatal("Failed to connect to database: %v", err)
 	}

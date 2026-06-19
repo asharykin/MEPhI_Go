@@ -6,14 +6,14 @@ import (
 )
 
 type Config struct {
-	Database DatabaseConfig
-	JWT      JWTConfig
-	SMTP     SMTPConfig
-	Security SecurityConfig
+	Database *DatabaseConfig
+	JWT      *JWTConfig
+	SMTP     *SMTPConfig
+	Security *SecurityConfig
 }
 
 type DatabaseConfig struct {
-	connectionString string
+	ConnectionString string
 }
 
 type JWTConfig struct {
@@ -42,20 +42,20 @@ func LoadConfig() *Config {
 	}
 }
 
-func loadDatabaseConfig() DatabaseConfig {
-	return DatabaseConfig{
-		connectionString: getEnv("DB_URL", "postgres://bank_user:bank_password@localhost:5433/bank_db?sslmode=disable"),
+func loadDatabaseConfig() *DatabaseConfig {
+	return &DatabaseConfig{
+		ConnectionString: getEnv("DB_URL", "postgres://bank_user:bank_password@localhost:5433/bank_db?sslmode=disable"),
 	}
 }
 
-func loadJWTConfig() JWTConfig {
-	return JWTConfig{
+func loadJWTConfig() *JWTConfig {
+	return &JWTConfig{
 		Secret: getEnv("JWT_SECRET", "super-secret-key-change-in-production"),
 	}
 }
 
-func loadSMTPConfig() SMTPConfig {
-	return SMTPConfig{
+func loadSMTPConfig() *SMTPConfig {
+	return &SMTPConfig{
 		Host: getEnv("SMTP_HOST", "smtp.example.com"),
 		Port: getIntEnv("SMTP_PORT", 587),
 		User: getEnv("SMTP_USER", "noreply@example.com"),
@@ -63,7 +63,7 @@ func loadSMTPConfig() SMTPConfig {
 	}
 }
 
-func loadSecurityConfig() SecurityConfig {
+func loadSecurityConfig() *SecurityConfig {
 	public_data, err := os.ReadFile("./pgp_public.key")
 	if err != nil {
 		panic("Failed to read PGP key file")
@@ -72,7 +72,7 @@ func loadSecurityConfig() SecurityConfig {
 	if err != nil {
 		panic("Failed to read PGP private key file")
 	}
-	return SecurityConfig{
+	return &SecurityConfig{
 		HMACSecret:    getEnv("HMAC_SECRET", "hmac-secret-key-change-in-production"),
 		PGPPublicKey:  string(public_data),
 		PGPPrivateKey: string(private_data),
@@ -97,8 +97,4 @@ func getIntEnv(key string, defaultValue int) int {
 		return defaultValue
 	}
 	return value
-}
-
-func (c *DatabaseConfig) GetConnectionString() string {
-	return c.connectionString
 }
