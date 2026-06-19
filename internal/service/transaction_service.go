@@ -12,27 +12,21 @@ import (
 	"time"
 )
 
-type TransactionService interface {
-	Transfer(ctx context.Context, userID string, req *dto.TransferRequest) error
-	GetTransactionsBySender(ctx context.Context, senderID string) ([]*model.Transaction, error)
-	GetTransactionsByReceiver(ctx context.Context, receiverID string) ([]*model.Transaction, error)
-}
-
-type transactionService struct {
+type TransactionService struct {
 	transactionRepo repository.TransactionRepository
 	accountRepo     repository.AccountRepository
 	storage         *repository.Storage
 }
 
-func NewTransactionService(transactionRepo repository.TransactionRepository, accountRepo repository.AccountRepository, storage *repository.Storage) TransactionService {
-	return &transactionService{
+func NewTransactionService(transactionRepo repository.TransactionRepository, accountRepo repository.AccountRepository, storage *repository.Storage) *TransactionService {
+	return &TransactionService{
 		transactionRepo: transactionRepo,
 		accountRepo:     accountRepo,
 		storage:         storage,
 	}
 }
 
-func (s *transactionService) Transfer(ctx context.Context, userID string, req *dto.TransferRequest) error {
+func (s *TransactionService) Transfer(ctx context.Context, userID string, req *dto.TransferRequest) error {
 	fromAccount, err := s.accountRepo.GetByIDAndUserID(ctx, req.FromAccountID, userID)
 	if err != nil {
 		logger.Error("Failed to get sender account for transfer", "error", err, "account_id", req.FromAccountID, "user_id", userID)
@@ -97,10 +91,10 @@ func (s *transactionService) Transfer(ctx context.Context, userID string, req *d
 	return nil
 }
 
-func (s *transactionService) GetTransactionsBySender(ctx context.Context, senderID string) ([]*model.Transaction, error) {
+func (s *TransactionService) GetTransactionsBySender(ctx context.Context, senderID string) ([]*model.Transaction, error) {
 	return s.transactionRepo.GetBySenderID(ctx, senderID)
 }
 
-func (s *transactionService) GetTransactionsByReceiver(ctx context.Context, receiverID string) ([]*model.Transaction, error) {
+func (s *TransactionService) GetTransactionsByReceiver(ctx context.Context, receiverID string) ([]*model.Transaction, error) {
 	return s.transactionRepo.GetByReceiverID(ctx, receiverID)
 }

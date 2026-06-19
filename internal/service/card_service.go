@@ -21,12 +21,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type CardService interface {
-	CreateCard(ctx context.Context, userID string, req *dto.CreateCardRequest) (*dto.CardResponse, error)
-	GetCardsByUserID(ctx context.Context, userID string) ([]*dto.CardResponse, error)
-}
-
-type cardService struct {
+type CardService struct {
 	cardRepo    repository.CardRepository
 	accountRepo repository.AccountRepository
 	hmacSecret  []byte
@@ -41,7 +36,7 @@ func NewCardService(
 	hmacSecret string,
 	publicKey string,
 	privateKey string,
-) CardService {
+) *CardService {
 
 	pubList, err := openpgp.ReadArmoredKeyRing(bytes.NewReader([]byte(publicKey)))
 	if err != nil || len(pubList) == 0 {
@@ -53,7 +48,7 @@ func NewCardService(
 		logger.Fatal("Failed to parse PRIVATE key", "error", err)
 	}
 
-	return &cardService{
+	return &CardService{
 		cardRepo:      cardRepo,
 		accountRepo:   accountRepo,
 		hmacSecret:    []byte(hmacSecret),
@@ -62,7 +57,7 @@ func NewCardService(
 	}
 }
 
-func (s *cardService) CreateCard(ctx context.Context, userID string, req *dto.CreateCardRequest) (*dto.CardResponse, error) {
+func (s *CardService) CreateCard(ctx context.Context, userID string, req *dto.CreateCardRequest) (*dto.CardResponse, error) {
 	account, err := s.accountRepo.GetByIDAndUserID(ctx, req.AccountID, userID)
 	if err != nil {
 		logger.Error("Failed to get account for card creation", "error", err, "account_id", req.AccountID, "user_id", userID)
@@ -124,7 +119,7 @@ func (s *cardService) CreateCard(ctx context.Context, userID string, req *dto.Cr
 	}, nil
 }
 
-func (s *cardService) GetCardsByUserID(ctx context.Context, userID string) ([]*dto.CardResponse, error) {
+func (s *CardService) GetCardsByUserID(ctx context.Context, userID string) ([]*dto.CardResponse, error) {
 	cards, err := s.cardRepo.GetByUserID(ctx, userID)
 	if err != nil {
 		logger.Error("Failed to get cards for user", "error", err, "user_id", userID)

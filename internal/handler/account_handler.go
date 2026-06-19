@@ -13,11 +13,11 @@ import (
 )
 
 type AccountHandler struct {
-	accountService service.AccountService
+	service *service.AccountService
 }
 
-func NewAccountHandler(accountService service.AccountService) *AccountHandler {
-	return &AccountHandler{accountService: accountService}
+func NewAccountHandler(service *service.AccountService) *AccountHandler {
+	return &AccountHandler{service: service}
 }
 
 func (h *AccountHandler) CreateAccount(w http.ResponseWriter, r *http.Request) {
@@ -38,7 +38,7 @@ func (h *AccountHandler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := h.accountService.CreateAccount(r.Context(), userID, &req)
+	resp, err := h.service.CreateAccount(r.Context(), userID, &req)
 	if err != nil {
 		logger.Error("Failed to create account via handler", "error", err, "user_id", userID)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -57,7 +57,7 @@ func (h *AccountHandler) GetAccounts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accounts, err := h.accountService.GetAccountsByUserID(r.Context(), userID)
+	accounts, err := h.service.GetAccountsByUserID(r.Context(), userID)
 	if err != nil {
 		logger.Error("Failed to get accounts via handler", "error", err, "user_id", userID)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -96,7 +96,7 @@ func (h *AccountHandler) Deposit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.accountService.Deposit(r.Context(), accountID, req.Amount, userID)
+	err := h.service.Deposit(r.Context(), accountID, req.Amount, userID)
 	if err != nil {
 		logger.Error("Failed to deposit via handler", "error", err, "account_id", accountID, "user_id", userID)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -134,7 +134,7 @@ func (h *AccountHandler) Withdraw(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.accountService.Withdraw(r.Context(), accountID, req.Amount, userID)
+	err := h.service.Withdraw(r.Context(), accountID, req.Amount, userID)
 	if err != nil {
 		logger.Error("Failed to withdraw via handler", "error", err, "account_id", accountID, "user_id", userID)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -167,7 +167,7 @@ func (h *AccountHandler) PredictBalance(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	resp, err := h.accountService.PredictBalance(r.Context(), accountID, userID, days)
+	resp, err := h.service.PredictBalance(r.Context(), accountID, userID, days)
 	if err != nil {
 		logger.Error("Failed to predict balance via handler", "error", err, "account_id", accountID, "user_id", userID)
 		http.Error(w, err.Error(), http.StatusBadRequest)

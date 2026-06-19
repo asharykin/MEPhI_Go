@@ -9,11 +9,7 @@ import (
 	"time"
 )
 
-type AnalyticsService interface {
-	GetAnalytics(ctx context.Context, userID string, days int) (*dto.AnalyticsResponse, error)
-}
-
-type analyticsService struct {
+type AnalyticsService struct {
 	transactionRepo     repository.TransactionRepository
 	creditRepo          repository.CreditRepository
 	accountRepo         repository.AccountRepository
@@ -25,8 +21,8 @@ func NewAnalyticsService(
 	creditRepo repository.CreditRepository,
 	accountRepo repository.AccountRepository,
 	paymentScheduleRepo repository.PaymentScheduleRepository,
-) AnalyticsService {
-	return &analyticsService{
+) *AnalyticsService {
+	return &AnalyticsService{
 		transactionRepo:     transactionRepo,
 		creditRepo:          creditRepo,
 		accountRepo:         accountRepo,
@@ -34,7 +30,7 @@ func NewAnalyticsService(
 	}
 }
 
-func (s *analyticsService) GetAnalytics(ctx context.Context, userID string, days int) (*dto.AnalyticsResponse, error) {
+func (s *AnalyticsService) GetAnalytics(ctx context.Context, userID string, days int) (*dto.AnalyticsResponse, error) {
 	if days > 365 {
 		days = 365
 	} else if days <= 0 {

@@ -11,11 +11,11 @@ import (
 )
 
 type CardHandler struct {
-	cardService service.CardService
+	service *service.CardService
 }
 
-func NewCardHandler(cardService service.CardService) *CardHandler {
-	return &CardHandler{cardService: cardService}
+func NewCardHandler(service *service.CardService) *CardHandler {
+	return &CardHandler{service: service}
 }
 
 func (h *CardHandler) CreateCard(w http.ResponseWriter, r *http.Request) {
@@ -35,7 +35,7 @@ func (h *CardHandler) CreateCard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := h.cardService.CreateCard(r.Context(), userID, &req)
+	resp, err := h.service.CreateCard(r.Context(), userID, &req)
 	if err != nil {
 		logger.Error("Failed to create card via handler", "error", err, "user_id", userID)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -54,7 +54,7 @@ func (h *CardHandler) GetCards(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cards, err := h.cardService.GetCardsByUserID(r.Context(), userID)
+	cards, err := h.service.GetCardsByUserID(r.Context(), userID)
 	if err != nil {
 		logger.Error("Failed to get cards via handler", "error", err, "user_id", userID)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

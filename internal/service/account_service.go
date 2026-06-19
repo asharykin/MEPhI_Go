@@ -12,30 +12,21 @@ import (
 	"time"
 )
 
-type AccountService interface {
-	CreateAccount(ctx context.Context, userID string, req *dto.CreateAccountRequest) (*dto.AccountResponse, error)
-	GetAccountsByUserID(ctx context.Context, userID string) ([]*dto.AccountResponse, error)
-	GetAccountByID(ctx context.Context, accountID string, userID string) (*dto.AccountResponse, error)
-	Deposit(ctx context.Context, accountID string, amount float64, userID string) error
-	Withdraw(ctx context.Context, accountID string, amount float64, userID string) error
-	PredictBalance(ctx context.Context, accountID string, userID string, days int) (*dto.PredictBalanceResponse, error)
-}
-
-type accountService struct {
+type AccountService struct {
 	accountRepo         repository.AccountRepository
 	creditRepo          repository.CreditRepository
 	paymentScheduleRepo repository.PaymentScheduleRepository
 }
 
-func NewAccountService(accountRepo repository.AccountRepository, creditRepo repository.CreditRepository, paymentScheduleRepo repository.PaymentScheduleRepository) AccountService {
-	return &accountService{
+func NewAccountService(accountRepo repository.AccountRepository, creditRepo repository.CreditRepository, paymentScheduleRepo repository.PaymentScheduleRepository) *AccountService {
+	return &AccountService{
 		accountRepo:         accountRepo,
 		creditRepo:          creditRepo,
 		paymentScheduleRepo: paymentScheduleRepo,
 	}
 }
 
-func (s *accountService) CreateAccount(ctx context.Context, userID string, req *dto.CreateAccountRequest) (*dto.AccountResponse, error) {
+func (s *AccountService) CreateAccount(ctx context.Context, userID string, req *dto.CreateAccountRequest) (*dto.AccountResponse, error) {
 	account := &model.Account{
 		ID:        util.GenerateUUID(),
 		UserID:    userID,
@@ -61,7 +52,7 @@ func (s *accountService) CreateAccount(ctx context.Context, userID string, req *
 	}, nil
 }
 
-func (s *accountService) GetAccountsByUserID(ctx context.Context, userID string) ([]*dto.AccountResponse, error) {
+func (s *AccountService) GetAccountsByUserID(ctx context.Context, userID string) ([]*dto.AccountResponse, error) {
 	accounts, err := s.accountRepo.GetByUserID(ctx, userID)
 	if err != nil {
 		logger.Error("Failed to get accounts for user", "error", err, "user_id", userID)
@@ -81,7 +72,7 @@ func (s *accountService) GetAccountsByUserID(ctx context.Context, userID string)
 	return responses, nil
 }
 
-func (s *accountService) GetAccountByID(ctx context.Context, accountID string, userID string) (*dto.AccountResponse, error) {
+func (s *AccountService) GetAccountByID(ctx context.Context, accountID string, userID string) (*dto.AccountResponse, error) {
 	account, err := s.accountRepo.GetByIDAndUserID(ctx, accountID, userID)
 	if err != nil {
 		logger.Error("Failed to get account by ID and user ID", "error", err, "account_id", accountID, "user_id", userID)
@@ -97,7 +88,7 @@ func (s *accountService) GetAccountByID(ctx context.Context, accountID string, u
 	}, nil
 }
 
-func (s *accountService) Deposit(ctx context.Context, accountID string, amount float64, userID string) error {
+func (s *AccountService) Deposit(ctx context.Context, accountID string, amount float64, userID string) error {
 	account, err := s.accountRepo.GetByIDAndUserID(ctx, accountID, userID)
 	if err != nil {
 		logger.Error("Failed to get account for deposit", "error", err, "account_id", accountID, "user_id", userID)
@@ -115,7 +106,7 @@ func (s *accountService) Deposit(ctx context.Context, accountID string, amount f
 	return nil
 }
 
-func (s *accountService) Withdraw(ctx context.Context, accountID string, amount float64, userID string) error {
+func (s *AccountService) Withdraw(ctx context.Context, accountID string, amount float64, userID string) error {
 	account, err := s.accountRepo.GetByIDAndUserID(ctx, accountID, userID)
 	if err != nil {
 		logger.Error("Failed to get account for withdrawal", "error", err, "account_id", accountID, "user_id", userID)
@@ -138,7 +129,7 @@ func (s *accountService) Withdraw(ctx context.Context, accountID string, amount 
 	return nil
 }
 
-func (s *accountService) PredictBalance(ctx context.Context, accountID string, userID string, days int) (*dto.PredictBalanceResponse, error) {
+func (s *AccountService) PredictBalance(ctx context.Context, accountID string, userID string, days int) (*dto.PredictBalanceResponse, error) {
 	if days > 365 {
 		days = 365
 	} else if days <= 0 {

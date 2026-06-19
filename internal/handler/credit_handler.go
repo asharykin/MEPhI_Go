@@ -12,11 +12,11 @@ import (
 )
 
 type CreditHandler struct {
-	creditService service.CreditService
+	service *service.CreditService
 }
 
-func NewCreditHandler(creditService service.CreditService) *CreditHandler {
-	return &CreditHandler{creditService: creditService}
+func NewCreditHandler(service *service.CreditService) *CreditHandler {
+	return &CreditHandler{service: service}
 }
 
 func (h *CreditHandler) CreateCredit(w http.ResponseWriter, r *http.Request) {
@@ -36,7 +36,7 @@ func (h *CreditHandler) CreateCredit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := h.creditService.CreateCredit(r.Context(), userID, &req)
+	resp, err := h.service.CreateCredit(r.Context(), userID, &req)
 	if err != nil {
 		logger.Error("Failed to create credit via handler", "error", err, "user_id", userID)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -63,7 +63,7 @@ func (h *CreditHandler) GetSchedule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	schedule, err := h.creditService.GetCreditSchedule(r.Context(), creditID, userID)
+	schedule, err := h.service.GetCreditSchedule(r.Context(), creditID, userID)
 	if err != nil {
 		logger.Error("Failed to get credit schedule via handler", "error", err, "credit_id", creditID, "user_id", userID)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

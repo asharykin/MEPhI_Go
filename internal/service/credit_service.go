@@ -13,13 +13,7 @@ import (
 	"time"
 )
 
-type CreditService interface {
-	CreateCredit(ctx context.Context, userID string, req *dto.CreateCreditRequest) (*dto.CreditResponse, error)
-	GetCreditSchedule(ctx context.Context, creditID string, userID string) ([]*dto.PaymentScheduleResponse, error)
-	ProcessScheduledPayments(ctx context.Context) error
-}
-
-type creditService struct {
+type CreditService struct {
 	creditRepo          repository.CreditRepository
 	paymentScheduleRepo repository.PaymentScheduleRepository
 	accountRepo         repository.AccountRepository
@@ -43,8 +37,8 @@ func NewCreditService(
 	keyRateProvider KeyRateProvider,
 	emailService EmailService,
 	storage *repository.Storage,
-) CreditService {
-	return &creditService{
+) *CreditService {
+	return &CreditService{
 		creditRepo:          creditRepo,
 		paymentScheduleRepo: paymentScheduleRepo,
 		accountRepo:         accountRepo,
@@ -56,7 +50,7 @@ func NewCreditService(
 	}
 }
 
-func (s *creditService) CreateCredit(ctx context.Context, userID string, req *dto.CreateCreditRequest) (*dto.CreditResponse, error) {
+func (s *CreditService) CreateCredit(ctx context.Context, userID string, req *dto.CreateCreditRequest) (*dto.CreditResponse, error) {
 	account, err := s.accountRepo.GetByIDAndUserID(ctx, req.AccountID, userID)
 	if err != nil {
 		logger.Error("Failed to get account for credit creation", "error", err, "account_id", req.AccountID, "user_id", userID)
@@ -132,7 +126,7 @@ func (s *creditService) CreateCredit(ctx context.Context, userID string, req *dt
 	}, nil
 }
 
-func (s *creditService) GetCreditSchedule(ctx context.Context, creditID string, userID string) ([]*dto.PaymentScheduleResponse, error) {
+func (s *CreditService) GetCreditSchedule(ctx context.Context, creditID string, userID string) ([]*dto.PaymentScheduleResponse, error) {
 	credit, err := s.creditRepo.GetByID(ctx, creditID)
 	if err != nil {
 		logger.Error("Failed to get credit for schedule", "error", err, "credit_id", creditID)
@@ -166,7 +160,7 @@ func (s *creditService) GetCreditSchedule(ctx context.Context, creditID string, 
 	return responses, nil
 }
 
-func (s *creditService) ProcessScheduledPayments(ctx context.Context) error {
+func (s *CreditService) ProcessScheduledPayments(ctx context.Context) error {
 	logger.Info("Starting scheduled payments processing")
 	today := time.Now().Format("2006-01-02")
 	unpaidSchedules, err := s.paymentScheduleRepo.GetUnpaidDue(ctx, today)

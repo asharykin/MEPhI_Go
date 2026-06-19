@@ -10,11 +10,11 @@ import (
 )
 
 type AnalyticsHandler struct {
-	analyticsService service.AnalyticsService
+	service *service.AnalyticsService
 }
 
-func NewAnalyticsHandler(analyticsService service.AnalyticsService) *AnalyticsHandler {
-	return &AnalyticsHandler{analyticsService: analyticsService}
+func NewAnalyticsHandler(service *service.AnalyticsService) *AnalyticsHandler {
+	return &AnalyticsHandler{service: service}
 }
 
 func (h *AnalyticsHandler) GetAnalytics(w http.ResponseWriter, r *http.Request) {
@@ -33,7 +33,7 @@ func (h *AnalyticsHandler) GetAnalytics(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	resp, err := h.analyticsService.GetAnalytics(r.Context(), userID, days)
+	resp, err := h.service.GetAnalytics(r.Context(), userID, days)
 	if err != nil {
 		logger.Error("Failed to get analytics via handler", "error", err, "user_id", userID)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

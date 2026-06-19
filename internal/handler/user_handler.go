@@ -9,11 +9,11 @@ import (
 )
 
 type UserHandler struct {
-	userService service.UserService
+	service *service.UserService
 }
 
-func NewUserHandler(userService service.UserService) *UserHandler {
-	return &UserHandler{userService: userService}
+func NewUserHandler(service *service.UserService) *UserHandler {
+	return &UserHandler{service: service}
 }
 
 func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -27,7 +27,7 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := h.userService.Register(r.Context(), &req)
+	resp, err := h.service.Register(r.Context(), &req)
 	if err != nil {
 		if strings.Contains(err.Error(), "already exists") {
 			http.Error(w, err.Error(), http.StatusConflict)
@@ -53,7 +53,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := h.userService.Login(r.Context(), &req)
+	resp, err := h.service.Login(r.Context(), &req)
 	if err != nil {
 		if strings.Contains(err.Error(), "invalid credentials") {
 			http.Error(w, err.Error(), http.StatusUnauthorized)

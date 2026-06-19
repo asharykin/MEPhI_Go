@@ -15,25 +15,19 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type UserService interface {
-	Register(ctx context.Context, req *dto.RegisterRequest) (*dto.AuthResponse, error)
-	Login(ctx context.Context, req *dto.LoginRequest) (*dto.AuthResponse, error)
-	GetUserByID(ctx context.Context, userID string) (*model.User, error)
-}
-
-type userService struct {
+type UserService struct {
 	userRepo  repository.UserRepository
 	jwtSecret []byte
 }
 
-func NewUserService(userRepo repository.UserRepository, jwtSecret string) UserService {
-	return &userService{
+func NewUserService(userRepo repository.UserRepository, jwtSecret string) *UserService {
+	return &UserService{
 		userRepo:  userRepo,
 		jwtSecret: []byte(jwtSecret),
 	}
 }
 
-func (s *userService) Register(ctx context.Context, req *dto.RegisterRequest) (*dto.AuthResponse, error) {
+func (s *UserService) Register(ctx context.Context, req *dto.RegisterRequest) (*dto.AuthResponse, error) {
 	existingUser, err := s.userRepo.GetByEmail(ctx, req.Email)
 	if err != nil {
 		logger.Error("Failed to check email uniqueness during registration", "error", err)
@@ -92,7 +86,7 @@ func (s *userService) Register(ctx context.Context, req *dto.RegisterRequest) (*
 	}, nil
 }
 
-func (s *userService) Login(ctx context.Context, req *dto.LoginRequest) (*dto.AuthResponse, error) {
+func (s *UserService) Login(ctx context.Context, req *dto.LoginRequest) (*dto.AuthResponse, error) {
 	user, err := s.userRepo.GetByEmail(ctx, req.Email)
 	if err != nil {
 		logger.Error("Failed to get user by email during login", "error", err, "email", req.Email)
@@ -123,11 +117,11 @@ func (s *userService) Login(ctx context.Context, req *dto.LoginRequest) (*dto.Au
 	}, nil
 }
 
-func (s *userService) GetUserByID(ctx context.Context, userID string) (*model.User, error) {
+func (s *UserService) GetUserByID(ctx context.Context, userID string) (*model.User, error) {
 	return s.userRepo.GetByID(ctx, userID)
 }
 
-func (s *userService) generateJWT(userID string) (string, error) {
+func (s *UserService) generateJWT(userID string) (string, error) {
 	claims := jwt.RegisteredClaims{
 		Subject:   userID,
 		ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),

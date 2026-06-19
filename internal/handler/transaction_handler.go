@@ -10,11 +10,11 @@ import (
 )
 
 type TransactionHandler struct {
-	transactionService service.TransactionService
+	service *service.TransactionService
 }
 
-func NewTransactionHandler(transactionService service.TransactionService) *TransactionHandler {
-	return &TransactionHandler{transactionService: transactionService}
+func NewTransactionHandler(service *service.TransactionService) *TransactionHandler {
+	return &TransactionHandler{service: service}
 }
 
 func (h *TransactionHandler) Transfer(w http.ResponseWriter, r *http.Request) {
@@ -34,7 +34,7 @@ func (h *TransactionHandler) Transfer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.transactionService.Transfer(r.Context(), userID, &req)
+	err := h.service.Transfer(r.Context(), userID, &req)
 	if err != nil {
 		logger.Error("Failed to transfer via handler", "error", err, "user_id", userID)
 		http.Error(w, err.Error(), http.StatusBadRequest)
