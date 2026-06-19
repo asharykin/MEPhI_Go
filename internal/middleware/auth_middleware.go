@@ -1,50 +1,51 @@
 package middleware
 
 import (
-	"banksystem/internal/logger"
-	"banksystem/internal/service"
 	"context"
 	"net/http"
 	"strings"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
-type AuthMiddleware struct {
-	jwtService *service.JWTService
-	logger     logger.Logger
-}
+type contextKey string
 
-func NewAuthMiddleware(jwtService *service.JWTService, logger logger.Logger) *AuthMiddleware {
-	return &AuthMiddleware{
-		jwtService: jwtService,
-		logger:     logger,
+const userIDKey contextKey = "userID"
+
+func AuthMiddleware(jwtSecret []byte) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" {
+				http.Error(w, `{"error":"Authorization header required"}`, http.StatusUnauthorized)
+				return
+			}
+
+			tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+			claims := &jwt.RegisteredClaims{}
+
+			token, err := jwt.ParseWithClaims(tokenString, claims,
+				func(token *jwt.Token) (interface{}, error) {
+					return jwtSecret, nil
+				})
+
+			if err != nil || !token.Valid {
+				http.Error(w, `{"error":"Invalid token"}`, http.StatusUnauthorized)
+				return
+			}
+
+			if claims.Subject == "" {
+				http.Error(w, `{"error":"Invalid token subject"}`, http.StatusUnauthorized)
+				return
+			}
+
+			ctx := context.WithValue(r.Context(), userIDKey, claims.Subject)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
 	}
 }
 
-func (m *AuthMiddleware) Middleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			m.logger.Printf("No Authorization header")
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			m.logger.Printf("Invalid Authorization header format")
-			http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
-			return
-		}
-
-		userID, err := m.jwtService.ValidateToken(parts[1])
-		if err != nil {
-			m.logger.Printf("Token validation failed: %v", err)
-			http.Error(w, "Invalid token", http.StatusUnauthorized)
-			return
-		}
-
-		ctx := r.Context()
-		ctx = context.WithValue(ctx, "user_id", userID)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
+func GetUserIDFromContext(ctx context.Context) (string, bool) {
+	userID, ok := ctx.Value(userIDKey).(string)
+	return userID, ok
 }

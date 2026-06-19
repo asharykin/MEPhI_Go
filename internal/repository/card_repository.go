@@ -1,155 +1,71 @@
 package repository
 
 import (
-	"banksystem/internal/model"
+	"context"
 	"database/sql"
+	"errors"
+	"go-banking-service/internal/logger"
+	"go-banking-service/internal/model"
 )
 
-type CardRepository struct {
-	db *sql.DB
+type CardRepository interface {
+	Create(ctx context.Context, card *model.Card) error
+	GetByUserID(ctx context.Context, userID string) ([]*model.Card, error)
+	GetByID(ctx context.Context, id string) (*model.Card, error)
 }
 
-func NewCardRepository(db *sql.DB) *CardRepository {
-	return &CardRepository{db: db}
+type cardRepository struct {
+	storage *Storage
 }
 
-func (r *CardRepository) Create(card *model.Card) error {
-	query := `
-		INSERT INTO cards (account_id, card_number, expiry_date, cvv_hash, hmac, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id
-	`
-
-	return r.db.QueryRow(
-		query,
-		card.AccountID,
-		card.CardNumber,
-		card.ExpiryDate,
-		card.HashedCVV,
-		card.HMAC,
-		card.CreatedAt,
-		card.UpdatedAt,
-	).Scan(&card.ID)
+func NewCardRepository(storage *Storage) CardRepository {
+	return &cardRepository{storage: storage}
 }
 
-func (r *CardRepository) GetByID(id int64) (*model.Card, error) {
-	card := &model.Card{}
-
-	query := `
-		SELECT id, account_id, card_number, expiry_date, cvv_hash, hmac, created_at, updated_at
-		FROM cards
-		WHERE id = $1
-	`
-
-	err := r.db.QueryRow(query, id).Scan(
-		&card.ID,
-		&card.AccountID,
-		&card.CardNumber,
-		&card.ExpiryDate,
-		&card.HashedCVV,
-		&card.HMAC,
-		&card.CreatedAt,
-		&card.UpdatedAt,
-	)
-
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-
+func (r *cardRepository) Create(ctx context.Context, card *model.Card) error {
+	query := `INSERT INTO cards (id, user_id, account_id, number_encrypted, expiry_encrypted, cvv_hash, hmac, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+	_, err := r.storage.DB.ExecContext(ctx, query, card.ID, card.UserID, card.AccountID, card.NumberEncrypted, card.ExpiryEncrypted, card.CVVHash, card.HMAC, card.CreatedAt)
 	if err != nil {
-		return nil, err
+		logger.Error("Failed to create card in DB", "error", err, "card_id", card.ID)
+		return err
 	}
-
-	return card, nil
+	return nil
 }
 
-func (r *CardRepository) GetByUserID(userID int64) ([]*model.Card, error) {
-	query := `
-		SELECT c.id, c.account_id, c.card_number, c.expiry_date, c.cvv_hash, c.hmac, c.created_at, c.updated_at
-		FROM cards c
-		JOIN accounts a ON c.account_id = a.id
-		WHERE a.user_id = $1
-	`
-
-	rows, err := r.db.Query(query, userID)
+func (r *cardRepository) GetByUserID(ctx context.Context, userID string) ([]*model.Card, error) {
+	rows, err := r.storage.DB.QueryContext(ctx, `SELECT id, user_id, account_id, number_encrypted, expiry_encrypted, cvv_hash, hmac, created_at FROM cards WHERE user_id = $1`, userID)
 	if err != nil {
+		logger.Error("Failed to get cards by user ID from DB", "error", err, "user_id", userID)
 		return nil, err
 	}
 	defer rows.Close()
 
 	var cards []*model.Card
 	for rows.Next() {
-		card := &model.Card{}
-		err := rows.Scan(
-			&card.ID,
-			&card.AccountID,
-			&card.CardNumber,
-			&card.ExpiryDate,
-			&card.HashedCVV,
-			&card.HMAC,
-			&card.CreatedAt,
-			&card.UpdatedAt,
-		)
-		if err != nil {
+		var card model.Card
+		if err := rows.Scan(&card.ID, &card.UserID, &card.AccountID, &card.NumberEncrypted, &card.ExpiryEncrypted, &card.CVVHash, &card.HMAC, &card.CreatedAt); err != nil {
+			logger.Error("Failed to scan card row", "error", err)
 			return nil, err
 		}
-		cards = append(cards, card)
+		cards = append(cards, &card)
 	}
-
-	if err = rows.Err(); err != nil {
+	if err := rows.Err(); err != nil {
+		logger.Error("Error iterating over card rows", "error", err)
 		return nil, err
 	}
-
 	return cards, nil
 }
 
-func (r *CardRepository) GetByAccountID(accountID int64) ([]*model.Card, error) {
-	query := `
-		SELECT id, account_id, card_number, expiry_date, cvv_hash, hmac, created_at, updated_at
-		FROM cards
-		WHERE account_id = $1
-	`
-
-	rows, err := r.db.Query(query, accountID)
+func (r *cardRepository) GetByID(ctx context.Context, id string) (*model.Card, error) {
+	var card model.Card
+	query := `SELECT id, user_id, account_id, number_encrypted, expiry_encrypted, cvv_hash, hmac, created_at FROM cards WHERE id = $1`
+	err := r.storage.DB.QueryRowContext(ctx, query, id).Scan(&card.ID, &card.UserID, &card.AccountID, &card.NumberEncrypted, &card.ExpiryEncrypted, &card.CVVHash, &card.HMAC, &card.CreatedAt)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		logger.Error("Failed to get card by ID from DB", "error", err, "card_id", id)
 		return nil, err
 	}
-	defer rows.Close()
-
-	var cards []*model.Card
-	for rows.Next() {
-		card := &model.Card{}
-		err := rows.Scan(
-			&card.ID,
-			&card.AccountID,
-			&card.CardNumber,
-			&card.ExpiryDate,
-			&card.HashedCVV,
-			&card.HMAC,
-			&card.CreatedAt,
-			&card.UpdatedAt,
-		)
-		if err != nil {
-			return nil, err
-		}
-		cards = append(cards, card)
-	}
-
-	return cards, nil
-}
-
-func (r *CardRepository) VerifyHMAC(id int64, hmac []byte) (bool, error) {
-	query := `
-		SELECT hmac = $1
-		FROM cards
-		WHERE id = $2
-	`
-
-	var matches bool
-	err := r.db.QueryRow(query, hmac, id).Scan(&matches)
-	if err != nil {
-		return false, err
-	}
-
-	return matches, nil
+	return &card, nil
 }

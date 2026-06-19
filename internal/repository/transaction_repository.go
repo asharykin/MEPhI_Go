@@ -1,111 +1,91 @@
 package repository
 
 import (
-	"banksystem/internal/model"
 	"context"
 	"database/sql"
+	"go-banking-service/internal/logger"
+	"go-banking-service/internal/model"
 )
 
-type TransactionRepository struct {
-	db *sql.DB
+type TransactionRepository interface {
+	Create(ctx context.Context, transaction *model.Transaction) error
+	GetBySenderID(ctx context.Context, senderID string) ([]*model.Transaction, error)
+	GetByReceiverID(ctx context.Context, receiverID string) ([]*model.Transaction, error)
+	CreateTx(ctx context.Context, tx *sql.Tx, transaction *model.Transaction) error
 }
 
-func NewTransactionRepository(db *sql.DB) *TransactionRepository {
-	return &TransactionRepository{db: db}
+type TransactionRepositoryImpl struct {
+	Storage *Storage
 }
 
-func (r *TransactionRepository) Create(ctx context.Context, tx *sql.Tx, transaction *model.Transaction) (*model.Transaction, error) {
-	query := `
-		INSERT INTO transactions (account_id, type, amount, status, to_account_id, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id, created_at
-	`
+func NewTransactionRepository(storage *Storage) TransactionRepository {
+	return &TransactionRepositoryImpl{Storage: storage}
+}
 
-	err := tx.QueryRowContext(
-		ctx,
-		query,
-		transaction.AccountID,
-		transaction.Type,
-		transaction.Amount,
-		transaction.Status,
-		transaction.ToAccountID,
-		transaction.CreatedAt,
-	).Scan(&transaction.ID, &transaction.CreatedAt)
-
+func (r *TransactionRepositoryImpl) Create(ctx context.Context, transaction *model.Transaction) error {
+	query := `INSERT INTO transactions (id, sender_id, receiver_id, amount, type, description, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`
+	_, err := r.Storage.DB.ExecContext(ctx, query, transaction.ID, transaction.SenderID, transaction.ReceiverID, transaction.Amount, transaction.Type, transaction.Description, transaction.CreatedAt)
 	if err != nil {
-		return nil, err
+		logger.Error("Failed to create transaction in DB", "error", err, "transaction_id", transaction.ID)
+		return err
 	}
-
-	return transaction, nil
+	return nil
 }
 
-func (r *TransactionRepository) GetByID(ctx context.Context, id int64) (*model.Transaction, error) {
-	query := `
-		SELECT id, account_id, type, amount, status, to_account_id, created_at
-		FROM transactions
-		WHERE id = $1
-	`
-
-	transaction := &model.Transaction{}
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&transaction.ID,
-		&transaction.AccountID,
-		&transaction.Type,
-		&transaction.Amount,
-		&transaction.Status,
-		&transaction.ToAccountID,
-		&transaction.CreatedAt,
-	)
-
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-
-	return transaction, err
-}
-
-func (r *TransactionRepository) GetByAccountID(ctx context.Context, accountID int64) ([]*model.Transaction, error) {
-	query := `
-		SELECT id, account_id, type, amount, status, to_account_id, created_at
-		FROM transactions
-		WHERE account_id = $1
-		ORDER BY created_at DESC
-	`
-
-	rows, err := r.db.QueryContext(ctx, query, accountID)
+func (r *TransactionRepositoryImpl) GetBySenderID(ctx context.Context, senderID string) ([]*model.Transaction, error) {
+	rows, err := r.Storage.DB.QueryContext(ctx, `SELECT id, sender_id, receiver_id, amount, type, description, created_at FROM transactions WHERE sender_id = $1`, senderID)
 	if err != nil {
+		logger.Error("Failed to get transactions by sender ID from DB", "error", err, "sender_id", senderID)
 		return nil, err
 	}
 	defer rows.Close()
 
 	var transactions []*model.Transaction
 	for rows.Next() {
-		transaction := &model.Transaction{}
-		err := rows.Scan(
-			&transaction.ID,
-			&transaction.AccountID,
-			&transaction.Type,
-			&transaction.Amount,
-			&transaction.Status,
-			&transaction.ToAccountID,
-			&transaction.CreatedAt,
-		)
-		if err != nil {
+		var transaction model.Transaction
+		if err := rows.Scan(&transaction.ID, &transaction.SenderID, &transaction.ReceiverID, &transaction.Amount, &transaction.Type, &transaction.Description, &transaction.CreatedAt); err != nil {
+			logger.Error("Failed to scan transaction row", "error", err)
 			return nil, err
 		}
-		transactions = append(transactions, transaction)
+		transactions = append(transactions, &transaction)
 	}
-
-	return transactions, rows.Err()
+	if err := rows.Err(); err != nil {
+		logger.Error("Error iterating over transaction rows", "error", err)
+		return nil, err
+	}
+	return transactions, nil
 }
 
-func (r *TransactionRepository) UpdateStatus(ctx context.Context, tx *sql.Tx, id int64, status string) error {
-	query := `
-		UPDATE transactions
-		SET status = $1
-		WHERE id = $2
-	`
+func (r *TransactionRepositoryImpl) GetByReceiverID(ctx context.Context, receiverID string) ([]*model.Transaction, error) {
+	rows, err := r.Storage.DB.QueryContext(ctx, `SELECT id, sender_id, receiver_id, amount, type, description, created_at FROM transactions WHERE receiver_id = $1`, receiverID)
+	if err != nil {
+		logger.Error("Failed to get transactions by receiver ID from DB", "error", err, "receiver_id", receiverID)
+		return nil, err
+	}
+	defer rows.Close()
 
-	_, err := tx.ExecContext(ctx, query, status, id)
-	return err
+	var transactions []*model.Transaction
+	for rows.Next() {
+		var transaction model.Transaction
+		if err := rows.Scan(&transaction.ID, &transaction.SenderID, &transaction.ReceiverID, &transaction.Amount, &transaction.Type, &transaction.Description, &transaction.CreatedAt); err != nil {
+			logger.Error("Failed to scan transaction row", "error", err)
+			return nil, err
+		}
+		transactions = append(transactions, &transaction)
+	}
+	if err := rows.Err(); err != nil {
+		logger.Error("Error iterating over transaction rows", "error", err)
+		return nil, err
+	}
+	return transactions, nil
+}
+
+func (r *TransactionRepositoryImpl) CreateTx(ctx context.Context, tx *sql.Tx, transaction *model.Transaction) error {
+	query := `INSERT INTO transactions (id, sender_id, receiver_id, amount, type, description, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`
+	_, err := tx.ExecContext(ctx, query, transaction.ID, transaction.SenderID, transaction.ReceiverID, transaction.Amount, transaction.Type, transaction.Description, transaction.CreatedAt)
+	if err != nil {
+		logger.Error("Failed to create transaction in DB (tx)", "error", err, "transaction_id", transaction.ID)
+		return err
+	}
+	return nil
 }

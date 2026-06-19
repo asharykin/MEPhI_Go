@@ -1,76 +1,60 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username VARCHAR(50) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS accounts (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    balance DECIMAL(15,2) DEFAULT 0.00,
-    type VARCHAR(50),
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id),
+    balance NUMERIC(15, 2) DEFAULT 0.00 CHECK (balance >= 0),
+    currency VARCHAR(3) DEFAULT 'RUB' CHECK (currency = 'RUB'),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS cards (
-    id SERIAL PRIMARY KEY,
-    account_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE,
-    card_number BYTEA NOT NULL, -- Зашифрованный номер карты
-    expiry_date BYTEA NOT NULL, -- Зашифрованная дата
-    cvv_hash VARCHAR(255) NOT NULL, -- Хеш CVV
-    hmac BYTEA NOT NULL, -- HMAC для проверки целостности
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id),
+    account_id UUID NOT NULL REFERENCES accounts(id),
+    number_encrypted BYTEA NOT NULL,
+    expiry_encrypted BYTEA NOT NULL,
+    cvv_hash BYTEA NOT NULL,
+    hmac VARCHAR(64) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS transactions (
-    id SERIAL PRIMARY KEY,
-    from_account_id INTEGER REFERENCES accounts(id),
-    to_account_id INTEGER REFERENCES accounts(id),
-    account_id INTEGER REFERENCES accounts(id),
-    amount DECIMAL(15,2) NOT NULL,
-    type VARCHAR(50) NOT NULL,
-    status VARCHAR(50) NOT NULL,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sender_id UUID REFERENCES accounts(id),
+    receiver_id UUID REFERENCES accounts(id),
+    amount NUMERIC(15, 2) NOT NULL CHECK (amount > 0),
+    type VARCHAR(20) NOT NULL,
     description TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS credits (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    account_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE,
-    amount DECIMAL(15,2) NOT NULL,
-    interest_rate DECIMAL(5,2) NOT NULL,
-    term_months INTEGER NOT NULL,
-    status VARCHAR(50) NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id),
+    account_id UUID NOT NULL REFERENCES accounts(id),
+    principal NUMERIC(15, 2) NOT NULL CHECK (principal > 0),
+    interest_rate NUMERIC(5, 2) NOT NULL CHECK (interest_rate >= 0),
+    term_months INT NOT NULL CHECK (term_months > 0),
+    monthly_payment NUMERIC(15, 2) NOT NULL CHECK (monthly_payment > 0),
+    remaining_debt NUMERIC(15, 2) NOT NULL CHECK (remaining_debt >= 0),
+    status VARCHAR(20) DEFAULT 'active',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS payment_schedules (
-    id SERIAL PRIMARY KEY,
-    credit_id INTEGER REFERENCES credits(id) ON DELETE CASCADE,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    credit_id UUID NOT NULL REFERENCES credits(id),
     payment_date DATE NOT NULL,
-    amount DECIMAL(15,2) NOT NULL,
-    principal DECIMAL(15,2) NOT NULL,
-    interest DECIMAL(15,2) NOT NULL,
-    status VARCHAR(50) NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS credit_payments (
-    id SERIAL PRIMARY KEY,
-    credit_id INTEGER NOT NULL REFERENCES credits(id),
-    amount DECIMAL(15,2) NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'pending',
-    due_date TIMESTAMP NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    amount NUMERIC(15, 2) NOT NULL CHECK (amount > 0),
+    is_paid BOOLEAN DEFAULT FALSE,
+    late_fee_applied BOOLEAN DEFAULT FALSE
 );

@@ -1,130 +1,84 @@
 package repository
 
 import (
-	"banksystem/internal/model"
 	"context"
 	"database/sql"
+	"errors"
+	"go-banking-service/internal/logger"
+	"go-banking-service/internal/model"
+
+	"github.com/lib/pq"
 )
 
-type UserRepository struct {
-	db *sql.DB
+var ErrUniqueViolation = errors.New("unique constraint violation")
+
+type UserRepository interface {
+	Create(ctx context.Context, user *model.User) error
+	GetByEmail(ctx context.Context, email string) (*model.User, error)
+	GetByUsername(ctx context.Context, username string) (*model.User, error)
+	GetByID(ctx context.Context, id string) (*model.User, error)
 }
 
-func NewUserRepository(db *sql.DB) *UserRepository {
-	return &UserRepository{
-		db: db,
-	}
+type userRepository struct {
+	storage *Storage
 }
 
-func (r *UserRepository) Create(ctx context.Context, tx *sql.Tx, user *model.User) (*model.User, error) {
-	query := `
-		INSERT INTO users (username, email, password_hash, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, created_at
-	`
+func NewUserRepository(storage *Storage) UserRepository {
+	return &userRepository{storage: storage}
+}
 
-	err := tx.QueryRowContext(
-		ctx,
-		query,
-		user.Username,
-		user.Email,
-		user.PasswordHash,
-		user.CreatedAt,
-		user.UpdatedAt,
-	).Scan(&user.ID, &user.CreatedAt)
-
+func (r *userRepository) Create(ctx context.Context, user *model.User) error {
+	query := `INSERT INTO users (id, username, email, password_hash, created_at) VALUES ($1, $2, $3, $4, $5)`
+	_, err := r.storage.DB.ExecContext(ctx, query, user.ID, user.Username, user.Email, user.PasswordHash, user.CreatedAt)
 	if err != nil {
-		if err.Error() == "pq: duplicate key value violates unique constraint" {
-			return nil, ErrAlreadyExists
+		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
+			logger.Warn("Unique constraint violation in DB", "error", err, "user_id", user.ID)
+			return ErrUniqueViolation
 		}
+		logger.Error("Failed to create user in DB", "error", err, "user_id", user.ID)
+		return err
+	}
+	return nil
+}
+
+func (r *userRepository) GetByEmail(ctx context.Context, email string) (*model.User, error) {
+	var user model.User
+	query := `SELECT id, username, email, password_hash, created_at FROM users WHERE email = $1`
+	err := r.storage.DB.QueryRowContext(ctx, query, email).Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.CreatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		logger.Error("Failed to get user by email from DB", "error", err, "email", email)
 		return nil, err
 	}
-
-	return user, nil
+	return &user, nil
 }
 
-func (r *UserRepository) GetByID(ctx context.Context, id int64) (*model.User, error) {
-	query := `
-		SELECT id, username, email, password_hash, created_at, updated_at
-		FROM users
-		WHERE id = $1
-	`
-
-	user := &model.User{}
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&user.ID,
-		&user.Username,
-		&user.Email,
-		&user.PasswordHash,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	)
-
-	if err == sql.ErrNoRows {
-		return nil, ErrNotFound
-	}
+func (r *userRepository) GetByUsername(ctx context.Context, username string) (*model.User, error) {
+	var user model.User
+	query := `SELECT id, username, email, password_hash, created_at FROM users WHERE username = $1`
+	err := r.storage.DB.QueryRowContext(ctx, query, username).Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.CreatedAt)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		logger.Error("Failed to get user by username from DB", "error", err, "username", username)
 		return nil, err
 	}
-
-	return user, nil
+	return &user, nil
 }
 
-func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*model.User, error) {
-	query := `
-		SELECT id, username, email, password_hash, created_at, updated_at
-		FROM users
-		WHERE email = $1
-	`
-
-	user := &model.User{}
-	err := r.db.QueryRowContext(ctx, query, email).Scan(
-		&user.ID,
-		&user.Username,
-		&user.Email,
-		&user.PasswordHash,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	)
-
-	if err == sql.ErrNoRows {
-		return nil, ErrNotFound
-	}
+func (r *userRepository) GetByID(ctx context.Context, id string) (*model.User, error) {
+	var user model.User
+	query := `SELECT id, username, email, password_hash, created_at FROM users WHERE id = $1`
+	err := r.storage.DB.QueryRowContext(ctx, query, id).Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.CreatedAt)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		logger.Error("Failed to get user by ID from DB", "error", err, "user_id", id)
 		return nil, err
 	}
-
-	return user, nil
-}
-
-func (r *UserRepository) CheckEmailExists(ctx context.Context, email string) (bool, error) {
-	query := `
-		SELECT EXISTS(
-			SELECT 1 FROM users WHERE email = $1
-		)
-	`
-
-	var exists bool
-	err := r.db.QueryRowContext(ctx, query, email).Scan(&exists)
-	if err != nil {
-		return false, err
-	}
-
-	return exists, nil
-}
-
-func (r *UserRepository) CheckUsernameExists(ctx context.Context, username string) (bool, error) {
-	query := `
-		SELECT EXISTS(
-			SELECT 1 FROM users WHERE username = $1
-		)
-	`
-
-	var exists bool
-	err := r.db.QueryRowContext(ctx, query, username).Scan(&exists)
-	if err != nil {
-		return false, err
-	}
-
-	return exists, nil
+	return &user, nil
 }

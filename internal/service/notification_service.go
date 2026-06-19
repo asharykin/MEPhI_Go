@@ -3,75 +3,55 @@ package service
 import (
 	"crypto/tls"
 	"fmt"
-	"log"
-	"os"
+	"go-banking-service/internal/logger"
 
 	"github.com/go-mail/mail/v2"
 )
 
-type NotificationService struct {
-	smtpHost     string
-	smtpPort     int
-	smtpUser     string
-	smtpPassword string
+type EmailService interface {
+	SendPaymentNotification(to string, amount float64) error
 }
 
-func NewNotificationService() *NotificationService {
-	return &NotificationService{
-		smtpHost:     os.Getenv("SMTP_HOST"),
-		smtpPort:     587,
-		smtpUser:     os.Getenv("SMTP_USER"),
-		smtpPassword: os.Getenv("SMTP_PASSWORD"),
+type emailService struct {
+	smtpHost string
+	smtpPort int
+	smtpUser string
+	smtpPass string
+}
+
+func NewEmailService(smtpHost string, smtpPort int, smtpUser string, smtpPass string) EmailService {
+	return &emailService{
+		smtpHost: smtpHost,
+		smtpPort: smtpPort,
+		smtpUser: smtpUser,
+		smtpPass: smtpPass,
 	}
 }
 
-func (s *NotificationService) SendPaymentNotification(email string, amount float64) error {
+func (s *emailService) SendPaymentNotification(to string, amount float64) error {
+	content := fmt.Sprintf(`
+        <h1>Спасибо за оплату!</h1>
+        <p>Сумма: <strong>%.2f RUB</strong></p>
+        <small>Это автоматическое уведомление</small>
+    `, amount)
+
 	m := mail.NewMessage()
 	m.SetHeader("From", s.smtpUser)
-	m.SetHeader("To", email)
-	m.SetHeader("Subject", "Уведомление о платеже")
-	m.SetBody("text/html", fmt.Sprintf(`
-		<h1>Уведомление о платеже</h1>
-		<p>Сумма платежа: %.2f RUB</p>
-		<p>Спасибо за использование нашего сервиса!</p>
-	`, amount))
+	m.SetHeader("To", to)
+	m.SetHeader("Subject", "Платеж успешно проведен")
+	m.SetBody("text/html", content)
 
-	d := mail.NewDialer(s.smtpHost, s.smtpPort, s.smtpUser, s.smtpPassword)
+	d := mail.NewDialer(s.smtpHost, s.smtpPort, s.smtpUser, s.smtpPass)
 	d.TLSConfig = &tls.Config{
 		ServerName:         s.smtpHost,
 		InsecureSkipVerify: false,
 	}
 
 	if err := d.DialAndSend(m); err != nil {
-		log.Printf("Ошибка отправки email: %v", err)
-		return err
+		logger.Error("SMTP error", "error", err, "to", to)
+		return fmt.Errorf("email sending failed")
 	}
 
-	return nil
-}
-
-func (s *NotificationService) SendCreditPaymentNotification(email string, amount float64, dueDate string) error {
-	m := mail.NewMessage()
-	m.SetHeader("From", s.smtpUser)
-	m.SetHeader("To", email)
-	m.SetHeader("Subject", "Напоминание о платеже по кредиту")
-	m.SetBody("text/html", fmt.Sprintf(`
-		<h1>Напоминание о платеже по кредиту</h1>
-		<p>Сумма платежа: %.2f RUB</p>
-		<p>Дата платежа: %s</p>
-		<p>Пожалуйста, убедитесь, что на вашем счете достаточно средств.</p>
-	`, amount, dueDate))
-
-	d := mail.NewDialer(s.smtpHost, s.smtpPort, s.smtpUser, s.smtpPassword)
-	d.TLSConfig = &tls.Config{
-		ServerName:         s.smtpHost,
-		InsecureSkipVerify: false,
-	}
-
-	if err := d.DialAndSend(m); err != nil {
-		log.Printf("Ошибка отправки email: %v", err)
-		return err
-	}
-
+	logger.Info("Email sent successfully", "to", to, "amount", amount)
 	return nil
 }

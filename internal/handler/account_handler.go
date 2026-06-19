@@ -1,88 +1,105 @@
 package handler
 
 import (
-	"banksystem/internal/model"
-	"banksystem/internal/service"
 	"encoding/json"
+	"go-banking-service/internal/dto"
+	"go-banking-service/internal/logger"
+	"go-banking-service/internal/middleware"
+	"go-banking-service/internal/service"
 	"net/http"
 	"strconv"
+
+	"github.com/gorilla/mux"
 )
 
 type AccountHandler struct {
-	service *service.AccountService
+	accountService service.AccountService
 }
 
-func NewAccountHandler(service *service.AccountService) *AccountHandler {
-	return &AccountHandler{service: service}
+func NewAccountHandler(accountService service.AccountService) *AccountHandler {
+	return &AccountHandler{accountService: accountService}
 }
 
 func (h *AccountHandler) CreateAccount(w http.ResponseWriter, r *http.Request) {
-	var req model.AccountCreateRequest
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, `{"error":"Unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
+	var req dto.CreateAccountRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, `{"error":"Invalid request body"}`, http.StatusBadRequest)
 		return
 	}
 
-	account, err := h.service.CreateAccount(r.Context(), req.UserID, req.Type)
+	if err := req.Validate(); err != nil {
+		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusBadRequest)
+		return
+	}
+
+	resp, err := h.accountService.CreateAccount(r.Context(), userID, &req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		logger.Error("Failed to create account via handler", "error", err, "user_id", userID)
+		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
 
-	json.NewEncoder(w).Encode(account)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(resp)
 }
 
-func (h *AccountHandler) GetUserAccounts(w http.ResponseWriter, r *http.Request) {
-	userID, err := strconv.ParseInt(r.URL.Query().Get("user_id"), 10, 64)
-	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+func (h *AccountHandler) GetAccounts(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, `{"error":"Unauthorized"}`, http.StatusUnauthorized)
 		return
 	}
 
-	accounts, err := h.service.GetUserAccounts(r.Context(), userID)
+	accounts, err := h.accountService.GetAccountsByUserID(r.Context(), userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		logger.Error("Failed to get accounts via handler", "error", err, "user_id", userID)
+		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(accounts)
 }
 
-func (h *AccountHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
-	accountID, err := strconv.ParseInt(r.URL.Query().Get("account_id"), 10, 64)
-	if err != nil {
-		http.Error(w, "Invalid account ID", http.StatusBadRequest)
-		return
-	}
-
-	balance, err := h.service.GetBalance(r.Context(), accountID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	json.NewEncoder(w).Encode(map[string]float64{"balance": balance})
-}
-
 func (h *AccountHandler) Deposit(w http.ResponseWriter, r *http.Request) {
-	var request struct {
-		AccountID int64   `json:"account_id"`
-		Amount    float64 `json:"amount"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, `{"error":"Unauthorized"}`, http.StatusUnauthorized)
 		return
 	}
 
-	if request.Amount <= 0 {
-		http.Error(w, "Amount must be positive", http.StatusBadRequest)
+	vars := mux.Vars(r)
+	accountID := vars["id"]
+
+	if accountID == "" {
+		http.Error(w, `{"error":"Account ID is required"}`, http.StatusBadRequest)
 		return
 	}
 
-	err := h.service.Deposit(r.Context(), request.AccountID, request.Amount)
+	var req struct {
+		Amount float64 `json:"amount"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error":"Invalid request body"}`, http.StatusBadRequest)
+		return
+	}
+
+	if req.Amount <= 0 {
+		http.Error(w, `{"error":"Amount must be greater than zero"}`, http.StatusBadRequest)
+		return
+	}
+
+	err := h.accountService.Deposit(r.Context(), accountID, req.Amount, userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		logger.Error("Failed to deposit via handler", "error", err, "account_id", accountID, "user_id", userID)
+		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusBadRequest)
 		return
 	}
 
@@ -90,52 +107,74 @@ func (h *AccountHandler) Deposit(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AccountHandler) Withdraw(w http.ResponseWriter, r *http.Request) {
-	var request struct {
-		AccountID int64   `json:"account_id"`
-		Amount    float64 `json:"amount"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, `{"error":"Unauthorized"}`, http.StatusUnauthorized)
 		return
 	}
 
-	if request.Amount <= 0 {
-		http.Error(w, "Amount must be positive", http.StatusBadRequest)
+	vars := mux.Vars(r)
+	accountID := vars["id"]
+
+	if accountID == "" {
+		http.Error(w, `{"error":"Account ID is required"}`, http.StatusBadRequest)
 		return
 	}
 
-	err := h.service.Withdraw(r.Context(), request.AccountID, request.Amount)
+	var req struct {
+		Amount float64 `json:"amount"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error":"Invalid request body"}`, http.StatusBadRequest)
+		return
+	}
+
+	if req.Amount <= 0 {
+		http.Error(w, `{"error":"Amount must be greater than zero"}`, http.StatusBadRequest)
+		return
+	}
+
+	err := h.accountService.Withdraw(r.Context(), accountID, req.Amount, userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		logger.Error("Failed to withdraw via handler", "error", err, "account_id", accountID, "user_id", userID)
+		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusBadRequest)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
 }
 
-func (h *AccountHandler) Transfer(w http.ResponseWriter, r *http.Request) {
-	var request struct {
-		FromAccountID int64   `json:"from_account_id"`
-		ToAccountID   int64   `json:"to_account_id"`
-		Amount        float64 `json:"amount"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+func (h *AccountHandler) PredictBalance(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, `{"error":"Unauthorized"}`, http.StatusUnauthorized)
 		return
 	}
 
-	if request.Amount <= 0 {
-		http.Error(w, "Amount must be positive", http.StatusBadRequest)
+	vars := mux.Vars(r)
+	accountID := vars["id"]
+
+	if accountID == "" {
+		http.Error(w, `{"error":"Account ID is required"}`, http.StatusBadRequest)
 		return
 	}
 
-	err := h.service.Transfer(r.Context(), request.FromAccountID, request.ToAccountID, request.Amount)
+	daysStr := r.URL.Query().Get("days")
+	days := 30
+	if daysStr != "" {
+		if d, err := strconv.Atoi(daysStr); err == nil {
+			days = d
+		}
+	}
+
+	resp, err := h.accountService.PredictBalance(r.Context(), accountID, userID, days)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		logger.Error("Failed to predict balance via handler", "error", err, "account_id", accountID, "user_id", userID)
+		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusBadRequest)
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(resp)
 }

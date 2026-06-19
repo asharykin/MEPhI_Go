@@ -1,261 +1,183 @@
 package service
 
 import (
-	"banksystem/internal/model"
-	"banksystem/internal/repository"
 	"context"
-	"database/sql"
+	"errors"
 	"fmt"
+	"go-banking-service/internal/dto"
+	"go-banking-service/internal/logger"
+	"go-banking-service/internal/model"
+	"go-banking-service/internal/repository"
+	"go-banking-service/internal/util"
 	"time"
 )
 
-type AccountService struct {
-	accountRepo     *repository.AccountRepository
-	transactionRepo *repository.TransactionRepository
-	userRepo        *repository.UserRepository
-	db              *sql.DB
-	smtpService     *SMTPService
+type AccountService interface {
+	CreateAccount(ctx context.Context, userID string, req *dto.CreateAccountRequest) (*dto.AccountResponse, error)
+	GetAccountsByUserID(ctx context.Context, userID string) ([]*dto.AccountResponse, error)
+	GetAccountByID(ctx context.Context, accountID string, userID string) (*dto.AccountResponse, error)
+	Deposit(ctx context.Context, accountID string, amount float64, userID string) error
+	Withdraw(ctx context.Context, accountID string, amount float64, userID string) error
+	PredictBalance(ctx context.Context, accountID string, userID string, days int) (*dto.PredictBalanceResponse, error)
 }
 
-func NewAccountService(
-	db *sql.DB,
-	accountRepo *repository.AccountRepository,
-	transactionRepo *repository.TransactionRepository,
-	userRepo *repository.UserRepository,
-	smtpService *SMTPService,
-) *AccountService {
-	return &AccountService{
-		db:              db,
-		accountRepo:     accountRepo,
-		transactionRepo: transactionRepo,
-		userRepo:        userRepo,
-		smtpService:     smtpService,
+type accountService struct {
+	accountRepo         repository.AccountRepository
+	creditRepo          repository.CreditRepository
+	paymentScheduleRepo repository.PaymentScheduleRepository
+}
+
+func NewAccountService(accountRepo repository.AccountRepository, creditRepo repository.CreditRepository, paymentScheduleRepo repository.PaymentScheduleRepository) AccountService {
+	return &accountService{
+		accountRepo:         accountRepo,
+		creditRepo:          creditRepo,
+		paymentScheduleRepo: paymentScheduleRepo,
 	}
 }
 
-func (s *AccountService) CreateAccount(ctx context.Context, userID int64, accountType string) (*model.Account, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %v", err)
-	}
-	defer tx.Rollback()
-
+func (s *accountService) CreateAccount(ctx context.Context, userID string, req *dto.CreateAccountRequest) (*dto.AccountResponse, error) {
 	account := &model.Account{
+		ID:        util.GenerateUUID(),
 		UserID:    userID,
-		Type:      accountType,
-		Balance:   0,
-		IsActive:  true,
-		CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
-		UpdatedAt: sql.NullTime{Time: time.Now(), Valid: true},
+		Balance:   0.0,
+		Currency:  "RUB",
+		CreatedAt: time.Now(),
 	}
 
-	account, err = s.accountRepo.Create(ctx, tx, account)
+	err := s.accountRepo.Create(ctx, account)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create account: %v", err)
+		logger.Error("Failed to create account", "error", err, "user_id", userID)
+		return nil, fmt.Errorf("failed to create account: %w", err)
 	}
 
-	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %v", err)
-	}
+	logger.Info("Account created successfully", "account_id", account.ID, "user_id", userID)
 
-	return account, nil
+	return &dto.AccountResponse{
+		ID:        account.ID,
+		UserID:    account.UserID,
+		Balance:   account.Balance,
+		Currency:  account.Currency,
+		CreatedAt: account.CreatedAt,
+	}, nil
 }
 
-func (s *AccountService) GetUserAccounts(ctx context.Context, userID int64) ([]*model.Account, error) {
+func (s *accountService) GetAccountsByUserID(ctx context.Context, userID string) ([]*dto.AccountResponse, error) {
 	accounts, err := s.accountRepo.GetByUserID(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user accounts: %v", err)
+		logger.Error("Failed to get accounts for user", "error", err, "user_id", userID)
+		return nil, fmt.Errorf("failed to get accounts: %w", err)
 	}
-	return accounts, nil
+
+	var responses []*dto.AccountResponse
+	for _, acc := range accounts {
+		responses = append(responses, &dto.AccountResponse{
+			ID:        acc.ID,
+			UserID:    acc.UserID,
+			Balance:   acc.Balance,
+			Currency:  acc.Currency,
+			CreatedAt: acc.CreatedAt,
+		})
+	}
+	return responses, nil
 }
 
-func (s *AccountService) GetBalance(ctx context.Context, accountID int64) (float64, error) {
-	account, err := s.accountRepo.GetByID(ctx, accountID)
+func (s *accountService) GetAccountByID(ctx context.Context, accountID string, userID string) (*dto.AccountResponse, error) {
+	account, err := s.accountRepo.GetByIDAndUserID(ctx, accountID, userID)
 	if err != nil {
-		return 0, fmt.Errorf("failed to get account: %v", err)
+		logger.Error("Failed to get account by ID and user ID", "error", err, "account_id", accountID, "user_id", userID)
+		return nil, err
 	}
-	return account.Balance, nil
+
+	return &dto.AccountResponse{
+		ID:        account.ID,
+		UserID:    account.UserID,
+		Balance:   account.Balance,
+		Currency:  account.Currency,
+		CreatedAt: account.CreatedAt,
+	}, nil
 }
 
-func (s *AccountService) Deposit(ctx context.Context, accountID int64, amount float64) error {
-	tx, err := s.db.BeginTx(ctx, nil)
+func (s *accountService) Deposit(ctx context.Context, accountID string, amount float64, userID string) error {
+	account, err := s.accountRepo.GetByIDAndUserID(ctx, accountID, userID)
 	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %v", err)
+		logger.Error("Failed to get account for deposit", "error", err, "account_id", accountID, "user_id", userID)
+		return err
 	}
-	defer tx.Rollback()
 
-	account, err := s.accountRepo.GetByID(ctx, accountID)
+	newBalance := account.Balance + amount
+	err = s.accountRepo.UpdateBalance(ctx, accountID, newBalance)
 	if err != nil {
-		return fmt.Errorf("failed to get account: %v", err)
+		logger.Error("Failed to update balance for deposit", "error", err, "account_id", accountID, "amount", amount)
+		return fmt.Errorf("failed to update balance: %w", err)
 	}
 
-	account.Balance += amount
-	account.UpdatedAt = sql.NullTime{Time: time.Now(), Valid: true}
-
-	if err := s.accountRepo.Update(ctx, tx, account); err != nil {
-		return fmt.Errorf("failed to update account: %v", err)
-	}
-
-	transaction := &model.Transaction{
-		AccountID: accountID,
-		Type:      "deposit",
-		Amount:    amount,
-		Status:    "completed",
-		CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
-	}
-
-	if _, err := s.transactionRepo.Create(ctx, tx, transaction); err != nil {
-		return fmt.Errorf("failed to create transaction: %v", err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %v", err)
-	}
-
-	user, err := s.userRepo.GetByID(ctx, account.UserID)
-	if err != nil {
-		return fmt.Errorf("failed to get user: %v", err)
-	}
-
-	if err := s.smtpService.SendTransactionNotification(user.Email, amount, "deposit"); err != nil {
-		return fmt.Errorf("failed to send notification: %v", err)
-	}
-
+	logger.Info("Deposit successful", "account_id", accountID, "amount", amount, "new_balance", newBalance)
 	return nil
 }
 
-func (s *AccountService) Withdraw(ctx context.Context, accountID int64, amount float64) error {
-	tx, err := s.db.BeginTx(ctx, nil)
+func (s *accountService) Withdraw(ctx context.Context, accountID string, amount float64, userID string) error {
+	account, err := s.accountRepo.GetByIDAndUserID(ctx, accountID, userID)
 	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %v", err)
-	}
-	defer tx.Rollback()
-
-	account, err := s.accountRepo.GetByID(ctx, accountID)
-	if err != nil {
-		return fmt.Errorf("failed to get account: %v", err)
+		logger.Error("Failed to get account for withdrawal", "error", err, "account_id", accountID, "user_id", userID)
+		return err
 	}
 
 	if account.Balance < amount {
-		return fmt.Errorf("insufficient funds")
+		logger.Warn("Insufficient funds for withdrawal", "account_id", accountID, "balance", account.Balance, "amount", amount)
+		return errors.New("insufficient funds")
 	}
 
-	account.Balance -= amount
-	account.UpdatedAt = sql.NullTime{Time: time.Now(), Valid: true}
-
-	if err := s.accountRepo.Update(ctx, tx, account); err != nil {
-		return fmt.Errorf("failed to update account: %v", err)
-	}
-
-	transaction := &model.Transaction{
-		AccountID: accountID,
-		Type:      "withdraw",
-		Amount:    amount,
-		Status:    "completed",
-		CreatedAt: sql.NullTime{Time: time.Now(), Valid: true},
-	}
-
-	if _, err := s.transactionRepo.Create(ctx, tx, transaction); err != nil {
-		return fmt.Errorf("failed to create transaction: %v", err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %v", err)
-	}
-
-	user, err := s.userRepo.GetByID(ctx, account.UserID)
+	newBalance := account.Balance - amount
+	err = s.accountRepo.UpdateBalance(ctx, accountID, newBalance)
 	if err != nil {
-		return fmt.Errorf("failed to get user: %v", err)
+		logger.Error("Failed to update balance for withdrawal", "error", err, "account_id", accountID, "amount", amount)
+		return fmt.Errorf("failed to update balance: %w", err)
 	}
 
-	if err := s.smtpService.SendTransactionNotification(user.Email, amount, "withdraw"); err != nil {
-		return fmt.Errorf("failed to send notification: %v", err)
-	}
-
-	if account.Balance < 1000 {
-		if err := s.smtpService.SendLowBalanceNotification(user.Email, account.Balance); err != nil {
-			return fmt.Errorf("failed to send low balance notification: %v", err)
-		}
-	}
-
+	logger.Info("Withdrawal successful", "account_id", accountID, "amount", amount, "new_balance", newBalance)
 	return nil
 }
 
-func (s *AccountService) Transfer(ctx context.Context, fromAccountID, toAccountID int64, amount float64) error {
-	tx, err := s.db.BeginTx(ctx, nil)
+func (s *accountService) PredictBalance(ctx context.Context, accountID string, userID string, days int) (*dto.PredictBalanceResponse, error) {
+	if days > 365 {
+		days = 365
+	} else if days <= 0 {
+		days = 30
+	}
+
+	account, err := s.accountRepo.GetByIDAndUserID(ctx, accountID, userID)
 	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %v", err)
+		logger.Error("Failed to get account for prediction", "error", err, "account_id", accountID, "user_id", userID)
+		return nil, err
 	}
-	defer tx.Rollback()
 
-	fromAccount, err := s.accountRepo.GetByID(ctx, fromAccountID)
+	credits, err := s.creditRepo.GetByUserID(ctx, userID)
 	if err != nil {
-		return fmt.Errorf("failed to get source account: %v", err)
+		logger.Error("Failed to get credits", "error", err, "user_id", userID)
 	}
 
-	if fromAccount.Balance < amount {
-		return fmt.Errorf("insufficient funds")
-	}
+	totalScheduledPayments := 0.0
+	endDate := time.Now().AddDate(0, 0, days)
 
-	toAccount, err := s.accountRepo.GetByID(ctx, toAccountID)
-	if err != nil {
-		return fmt.Errorf("failed to get destination account: %v", err)
-	}
-
-	fromAccount.Balance -= amount
-	toAccount.Balance += amount
-	now := time.Now()
-	fromAccount.UpdatedAt = sql.NullTime{Time: now, Valid: true}
-	toAccount.UpdatedAt = sql.NullTime{Time: now, Valid: true}
-
-	if err := s.accountRepo.Update(ctx, tx, fromAccount); err != nil {
-		return fmt.Errorf("failed to update source account: %v", err)
-	}
-
-	if err := s.accountRepo.Update(ctx, tx, toAccount); err != nil {
-		return fmt.Errorf("failed to update destination account: %v", err)
-	}
-
-	transaction := &model.Transaction{
-		AccountID:   fromAccountID,
-		Type:        "transfer",
-		Amount:      amount,
-		Status:      "completed",
-		ToAccountID: sql.NullInt64{Int64: toAccountID, Valid: true},
-		CreatedAt:   sql.NullTime{Time: now, Valid: true},
-	}
-
-	if _, err := s.transactionRepo.Create(ctx, tx, transaction); err != nil {
-		return fmt.Errorf("failed to create transaction: %v", err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %v", err)
-	}
-
-	fromUser, err := s.userRepo.GetByID(ctx, fromAccount.UserID)
-	if err != nil {
-		return fmt.Errorf("failed to get source user: %v", err)
-	}
-
-	toUser, err := s.userRepo.GetByID(ctx, toAccount.UserID)
-	if err != nil {
-		return fmt.Errorf("failed to get destination user: %v", err)
-	}
-
-	if err := s.smtpService.SendTransactionNotification(fromUser.Email, amount, "transfer sent"); err != nil {
-		return fmt.Errorf("failed to send notification to source user: %v", err)
-	}
-
-	if err := s.smtpService.SendTransactionNotification(toUser.Email, amount, "transfer received"); err != nil {
-		return fmt.Errorf("failed to send notification to destination user: %v", err)
-	}
-
-	if fromAccount.Balance < 1000 {
-		if err := s.smtpService.SendLowBalanceNotification(fromUser.Email, fromAccount.Balance); err != nil {
-			return fmt.Errorf("failed to send low balance notification: %v", err)
+	for _, credit := range credits {
+		if credit.AccountID == accountID && credit.Status == "active" {
+			schedules, err := s.paymentScheduleRepo.GetByCreditID(ctx, credit.ID)
+			if err == nil {
+				for _, schedule := range schedules {
+					if !schedule.IsPaid && schedule.PaymentDate.Before(endDate) {
+						totalScheduledPayments += schedule.Amount
+					}
+				}
+			}
 		}
 	}
 
-	return nil
+	predictedBalance := account.Balance - totalScheduledPayments
+
+	return &dto.PredictBalanceResponse{
+		AccountID:        accountID,
+		CurrentBalance:   account.Balance,
+		PredictedBalance: predictedBalance,
+		Days:             days,
+	}, nil
 }

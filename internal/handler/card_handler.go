@@ -1,72 +1,67 @@
 package handler
 
 import (
-	"banksystem/internal/service"
 	"encoding/json"
+	"fmt"
+	"go-banking-service/internal/dto"
+	"go-banking-service/internal/logger"
+	"go-banking-service/internal/middleware"
+	"go-banking-service/internal/service"
 	"net/http"
-	"strconv"
 )
 
 type CardHandler struct {
-	service *service.CardService
+	cardService service.CardService
 }
 
-func NewCardHandler(service *service.CardService) *CardHandler {
-	return &CardHandler{service: service}
+func NewCardHandler(cardService service.CardService) *CardHandler {
+	return &CardHandler{cardService: cardService}
 }
 
 func (h *CardHandler) CreateCard(w http.ResponseWriter, r *http.Request) {
-	var request struct {
-		AccountID int64 `json:"account_id"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, `{"error":"Unauthorized"}`, http.StatusUnauthorized)
 		return
 	}
 
-	card, err := h.service.CreateCard(request.AccountID)
+	var req dto.CreateCardRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error":"Invalid request body"}`, http.StatusBadRequest)
+		return
+	}
+	if err := req.Validate(); err != nil {
+		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusBadRequest)
+		return
+	}
+
+	resp, err := h.cardService.CreateCard(r.Context(), userID, &req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		logger.Error("Failed to create card via handler", "error", err, "user_id", userID)
+		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
 
-	json.NewEncoder(w).Encode(card)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(resp)
 }
 
-func (h *CardHandler) GetUserCards(w http.ResponseWriter, r *http.Request) {
-	userID, err := strconv.ParseInt(r.URL.Query().Get("user_id"), 10, 64)
-	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+func (h *CardHandler) GetCards(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, `{"error":"Unauthorized"}`, http.StatusUnauthorized)
 		return
 	}
 
-	cards, err := h.service.GetUserCards(userID)
+	cards, err := h.cardService.GetCardsByUserID(r.Context(), userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		logger.Error("Failed to get cards via handler", "error", err, "user_id", userID)
+		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
+	fmt.Println("Cards retrieved successfully via handler for user_id:", userID, cards)
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(cards)
-}
-
-func (h *CardHandler) GetCard(w http.ResponseWriter, r *http.Request) {
-	cardID, err := strconv.ParseInt(r.URL.Query().Get("card_id"), 10, 64)
-	if err != nil {
-		http.Error(w, "Invalid card ID", http.StatusBadRequest)
-		return
-	}
-
-	card, err := h.service.GetCard(cardID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if card == nil {
-		http.Error(w, "Card not found", http.StatusNotFound)
-		return
-	}
-
-	json.NewEncoder(w).Encode(card)
 }

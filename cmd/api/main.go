@@ -1,87 +1,136 @@
 package main
 
 import (
-	"banksystem/internal/config"
-	"banksystem/internal/handler"
-	"banksystem/internal/middleware"
-	"banksystem/internal/repository"
-	"banksystem/internal/service"
-	"database/sql"
+	"context"
+	"fmt"
+	"go-banking-service/internal/config"
+	"go-banking-service/internal/handler"
+	"go-banking-service/internal/logger"
+	"go-banking-service/internal/middleware"
+	"go-banking-service/internal/repository"
+	"go-banking-service/internal/service"
 	"log"
 	"net/http"
+	"os"
+	"time"
 
-	_ "github.com/lib/pq"
-	"github.com/sirupsen/logrus"
+	"github.com/gorilla/mux"
 )
 
 func main() {
+	logger.Init()
+	logger.Info("Starting Bank Service API")
+
 	cfg := config.LoadConfig()
 
-	db, err := sql.Open("postgres", cfg.DatabaseURL)
+	storage, err := repository.NewStorage(cfg.Database.GetConnectionString())
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		logger.Fatal("Failed to connect to database: %v", err)
 	}
-	defer db.Close()
+	defer storage.Close()
 
-	logger := logrus.New()
-	logger.SetFormatter(&logrus.JSONFormatter{})
+	userRepo := repository.NewUserRepository(storage)
+	accountRepo := repository.NewAccountRepository(storage)
+	cardRepo := repository.NewCardRepository(storage)
+	transactionRepo := repository.NewTransactionRepository(storage)
+	creditRepo := repository.NewCreditRepository(storage)
+	paymentScheduleRepo := repository.NewPaymentScheduleRepository(storage)
 
-	userRepo := repository.NewUserRepository(db)
-	accountRepo := repository.NewAccountRepository(db)
-	transactionRepo := repository.NewTransactionRepository(db)
-	creditRepo := repository.NewCreditRepository(db)
-	creditPaymentRepo := repository.NewCreditPaymentRepository(db)
-	cardRepo := repository.NewCardRepository(db)
+	keyRateProvider := service.NewCentralBankKeyRateProvider()
+	emailService := service.NewEmailService(
+		cfg.SMTP.Host,
+		cfg.SMTP.Port,
+		cfg.SMTP.User,
+		cfg.SMTP.Pass,
+	)
 
-	smtpService := service.NewSMTPService(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUsername, cfg.SMTPPassword)
+	userService := service.NewUserService(userRepo, cfg.JWT.Secret)
+	accountService := service.NewAccountService(accountRepo, creditRepo, paymentScheduleRepo)
+	cardService := service.NewCardService(cardRepo, accountRepo, cfg.Security.HMACSecret, cfg.Security.PGPPublicKey, cfg.Security.PGPPrivateKey)
 
-	jwtService := service.NewJWTService(cfg.JWTSecret)
+	transactionService := service.NewTransactionService(transactionRepo, accountRepo, storage)
 
-	authService := service.NewAuthService(db, userRepo, jwtService)
-	accountService := service.NewAccountService(db, accountRepo, transactionRepo, userRepo, smtpService)
-	cardService := service.NewCardService(cardRepo, nil)
-	creditService := service.NewCreditService(db, creditRepo, accountRepo, creditPaymentRepo, transactionRepo)
-	creditPaymentService := service.NewCreditPaymentService(db, creditPaymentRepo, creditRepo, accountRepo)
+	creditService := service.NewCreditService(
+		creditRepo,
+		paymentScheduleRepo,
+		accountRepo,
+		transactionRepo,
+		userRepo,
+		keyRateProvider,
+		emailService,
+		storage,
+	)
 
-	authHandler := handler.NewAuthHandler(authService)
+	analyticsService := service.NewAnalyticsService(transactionRepo, creditRepo, accountRepo, paymentScheduleRepo)
+
+	userHandler := handler.NewUserHandler(userService)
 	accountHandler := handler.NewAccountHandler(accountService)
 	cardHandler := handler.NewCardHandler(cardService)
+	transactionHandler := handler.NewTransactionHandler(transactionService)
 	creditHandler := handler.NewCreditHandler(creditService)
-	creditPaymentHandler := handler.NewCreditPaymentHandler(creditPaymentService)
+	analyticsHandler := handler.NewAnalyticsHandler(analyticsService)
 
-	authMiddleware := middleware.NewAuthMiddleware(jwtService, logger)
+	r := mux.NewRouter()
 
-	mux := http.NewServeMux()
+	r.Use(middleware.LoggingMiddleware)
 
-	mux.HandleFunc("POST /api/register", authHandler.Register)
-	mux.HandleFunc("POST /api/login", authHandler.Login)
+	r.HandleFunc("/register", userHandler.Register).Methods("POST")
+	r.HandleFunc("/login", userHandler.Login).Methods("POST")
 
-	protectedMux := http.NewServeMux()
-	protectedMux.HandleFunc("POST /api/accounts/create", accountHandler.CreateAccount)
-	protectedMux.HandleFunc("GET /api/accounts/list", accountHandler.GetUserAccounts)
-	protectedMux.HandleFunc("/api/accounts/balance", accountHandler.GetBalance)
-	protectedMux.HandleFunc("POST /api/accounts/deposit", accountHandler.Deposit)
-	protectedMux.HandleFunc("POST /api/accounts/withdraw", accountHandler.Withdraw)
-	protectedMux.HandleFunc("POST /api/accounts/transfer", accountHandler.Transfer)
+	authRouter := r.PathPrefix("/").Subrouter()
+	authRouter.Use(middleware.AuthMiddleware([]byte(cfg.JWT.Secret)))
 
-	protectedMux.HandleFunc("/api/cards/create", cardHandler.CreateCard)
-	protectedMux.HandleFunc("/api/cards/list", cardHandler.GetUserCards)
-	protectedMux.HandleFunc("/api/cards/get", cardHandler.GetCard)
+	authRouter.HandleFunc("/accounts", accountHandler.CreateAccount).Methods("POST")
+	authRouter.HandleFunc("/accounts", accountHandler.GetAccounts).Methods("GET")
+	authRouter.HandleFunc("/accounts/{id}/deposit", accountHandler.Deposit).Methods("POST")
+	authRouter.HandleFunc("/accounts/{id}/withdraw", accountHandler.Withdraw).Methods("POST")
+	authRouter.HandleFunc("/accounts/{id}/predict", accountHandler.PredictBalance).Methods("GET")
 
-	protectedMux.HandleFunc("/api/credits/create", creditHandler.CreateCredit)
-	protectedMux.HandleFunc("/api/credits/list", creditHandler.GetUserCredits)
-	protectedMux.HandleFunc("/api/credits/get", creditHandler.GetCredit)
-	protectedMux.HandleFunc("/api/credits/schedule", creditHandler.GetPaymentSchedule)
+	authRouter.HandleFunc("/cards", cardHandler.CreateCard).Methods("POST")
+	authRouter.HandleFunc("/cards", cardHandler.GetCards).Methods("GET")
 
-	protectedMux.HandleFunc("/api/payments/create", creditPaymentHandler.CreatePayment)
-	protectedMux.HandleFunc("/api/payments/process", creditPaymentHandler.ProcessPayment)
-	protectedMux.HandleFunc("/api/payments/list", creditPaymentHandler.GetPaymentsByCreditID)
-	protectedMux.HandleFunc("/api/payments/pending", creditPaymentHandler.GetPendingPayments)
+	authRouter.HandleFunc("/transfer", transactionHandler.Transfer).Methods("POST")
 
-	mux.Handle("/api/", authMiddleware.Middleware(protectedMux))
+	authRouter.HandleFunc("/credits", creditHandler.CreateCredit).Methods("POST")
+	authRouter.HandleFunc("/credits/{id}/schedule", creditHandler.GetSchedule).Methods("GET")
 
-	logger.Printf("Starting server on port %s", cfg.Port)
-	if err := http.ListenAndServe(":"+cfg.Port, mux); err != nil {
-		logger.Fatalf("Failed to start server: %v", err)
+	authRouter.HandleFunc("/analytics", analyticsHandler.GetAnalytics).Methods("GET")
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	addr := fmt.Sprintf(":%s", port)
+	logger.Info(fmt.Sprintf("Server starting on %s", addr))
+
+	go func() {
+		ticker := time.NewTicker(12 * time.Hour)
+		defer ticker.Stop()
+
+		logger.Info("Scheduler started for processing scheduled payments every 12 hours")
+
+		for range ticker.C {
+			logger.Info("Running scheduled payment processing...")
+			ctx := context.Background()
+			err := creditService.ProcessScheduledPayments(ctx)
+			if err != nil {
+				logger.Error("Error during scheduled payment processing", "error", err)
+			} else {
+				logger.Info("Scheduled payment processing completed successfully")
+			}
+		}
+	}()
+
+	srv := &http.Server{
+		Addr:         addr,
+		Handler:      r,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	if err := srv.ListenAndServe(); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
 	}
 }

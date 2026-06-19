@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"fmt"
+	"go-banking-service/internal/logger"
 	"io"
 	"net/http"
 	"time"
@@ -10,96 +11,84 @@ import (
 	"github.com/beevik/etree"
 )
 
-const (
-	centralBankURL = "https://www.cbr.ru/DailyInfoWebServ/DailyInfo.asmx"
-)
-
-type CentralBankService struct {
+type CentralBankKeyRateProvider struct {
 	client *http.Client
 }
 
-func NewCentralBankService() *CentralBankService {
-	return &CentralBankService{
-		client: &http.Client{},
+func NewCentralBankKeyRateProvider() *CentralBankKeyRateProvider {
+	return &CentralBankKeyRateProvider{
+		client: &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
-func (s *CentralBankService) GetKeyRate() (float64, error) {
-	resp, err := s.client.Get("http://www.cbr.ru/scripts/XML_daily.asp")
+func (p *CentralBankKeyRateProvider) GetKeyRate() (float64, error) {
+	soapRequest := p.buildSOAPRequest()
+	rawBody, err := p.sendRequest(soapRequest)
 	if err != nil {
+		logger.Error("Failed to send request to CBR", "error", err)
 		return 0, err
 	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
+	rate, err := p.parseXMLResponse(rawBody)
 	if err != nil {
+		logger.Error("Failed to parse XML response from CBR", "error", err)
 		return 0, err
 	}
 
-	doc := etree.NewDocument()
-	if err := doc.ReadFromBytes(body); err != nil {
-		return 0, err
-	}
-
-	keyRateElement := doc.FindElement("//ValCurs/Valute[@ID='R01235']/Value")
-	if keyRateElement == nil {
-		return 0, nil
-	}
-
-	return 7.5, nil // Заглушка, так как реальный API ЦБ РФ требует сертификат
+	rate += 5
+	logger.Info("Retrieved key rate from CBR", "rate", rate)
+	return rate, nil
 }
 
-func (s *CentralBankService) buildSOAPRequest() string {
+func (p *CentralBankKeyRateProvider) buildSOAPRequest() string {
 	fromDate := time.Now().AddDate(0, 0, -30).Format("2006-01-02")
 	toDate := time.Now().Format("2006-01-02")
 	return fmt.Sprintf(`<?xml version="1.0" encoding="utf-8"?>
-		<soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
-			<soap12:Body>
-				<KeyRate xmlns="http://web.cbr.ru/">
-					<fromDate>%s</fromDate>
-					<ToDate>%s</ToDate>
-				</KeyRate>
-			</soap12:Body>
-		</soap12:Envelope>`, fromDate, toDate)
+        <soap12:Envelope xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
+            <soap12:Body>
+                <KeyRate xmlns="http://web.cbr.ru/">
+                    <fromDate>%s</fromDate>
+                    <ToDate>%s</ToDate>
+                </KeyRate>
+            </soap12:Body>
+        </soap12:Envelope>`, fromDate, toDate)
 }
 
-func (s *CentralBankService) sendRequest(soapRequest string) ([]byte, error) {
+func (p *CentralBankKeyRateProvider) sendRequest(soapRequest string) ([]byte, error) {
 	req, err := http.NewRequest(
 		"POST",
-		centralBankURL,
+		"https://www.cbr.ru/DailyInfoWebServ/DailyInfo.asmx",
 		bytes.NewBuffer([]byte(soapRequest)),
 	)
 	if err != nil {
 		return nil, err
 	}
-
 	req.Header.Set("Content-Type", "application/soap+xml; charset=utf-8")
 	req.Header.Set("SOAPAction", "http://web.cbr.ru/KeyRate")
 
-	resp, err := s.client.Do(req)
+	resp, err := p.client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ошибка запроса: %v", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("неверный статус ответа: %d", resp.StatusCode)
+	rawBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка чтения ответа: %v", err)
 	}
 
-	return io.ReadAll(resp.Body)
+	return rawBody, nil
 }
 
-func (s *CentralBankService) parseXMLResponse(rawBody []byte) (float64, error) {
+func (p *CentralBankKeyRateProvider) parseXMLResponse(rawBody []byte) (float64, error) {
 	doc := etree.NewDocument()
 	if err := doc.ReadFromBytes(rawBody); err != nil {
-		return 0, err
+		return 0, fmt.Errorf("ошибка парсинга XML: %v", err)
 	}
 
 	krElements := doc.FindElements("//diffgram/KeyRate/KR")
 	if len(krElements) == 0 {
 		return 0, fmt.Errorf("данные по ставке не найдены")
 	}
-
 	latestKR := krElements[0]
 	rateElement := latestKR.FindElement("./Rate")
 	if rateElement == nil {

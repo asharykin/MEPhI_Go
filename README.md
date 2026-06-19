@@ -1,212 +1,97 @@
 ## Описание проекта
 
-Данный сервис представляет собой REST API для управления банковскими счетами, картами и кредитами.
+REST API для банковского сервиса на языке Go, приложение реализует основные функции банкинга, включая регистрацию и аутентификацию пользователей, управление счетами и картами, переводы, оформление кредитов и расчет графиков платежей, а также аналитику.
 
-## Требования
+## Особенности
 
-- Go 1.23+
-- PostgreSQL 17+
-- Установленные переменные окружения (см. далее)
+- **Слоистая архитектура**: приложение разделено на основные слои: модели, репозитории, сервисы и обработчики.
 
-## Установка и запуск
+- **Безопасность**:
+  - Шифрование данных банковских карт через PGP и HMAC.
+  - Хеширование паролей с использованием bcrypt.
+  - Хеширование CVV с использованием bcrypt.
+  - Аутентификация с использованием JWT.
 
-1. Клонирование репозитория:
-```bash
-git clone <repository-url>
-cd MEPhI_Go
+- **Интеграции**:
+  - Получение ключевой ставки ЦБ РФ через SOAP-запросы с использованием `beevik/etree`.
+  - Отправка email-уведомлений о платежах через SMTP с использованием `go-mail/mail/v2`.
+
+- **База данных**: PostgreSQL с использованием транзакций.
+
+- **Логирование**: Использование библиотеки `logrus`.
+
+- **Автообработчик**: Автоматическая обработка платежей по кредитам.
+
+## Технологии
+
+- Go 1.25
+- PostgreSQL 17
+
+
+## Переменные окружения
+
+Перед запуском приложения необходимо настроить переменные окружения и создать файлы pgp_public.key и pgp_private.key в которых будут публичный и приватный pgp ключи.
+
+Пример переменных окружения:
+
+```env
+PORT=8080
+
+DB_URL=postgres://bank_user:bank_password@localhost:5433/bank_db?sslmode=disable
+
+JWT_SECRET=your_jwt_secret_key_here
+HMAC_SECRET=your_hmac_secret_key_here
+
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=your_email@example.com
+SMTP_PASS=your_email_password
 ```
 
-2. Установка зависимостей:
-```bash
-go mod download
-```
+## Запуск приложения
 
-3. Настройка переменных окружения:
-```bash
-export DB_HOST=localhost
-export DB_PORT=5433
-export DB_USER=postgres
-export DB_PASSWORD=your_password
-export DB_NAME=bank
-export JWT_SECRET=your_jwt_secret
-export SMTP_HOST=smtp.example.com
-export SMTP_PORT=587
-export SMTP_USER=your_email@example.com
-export SMTP_PASSWORD=your_smtp_password
-```
+1. Клонируйте репозиторий и перейдите в папку:
 
-4. Запуск тестовой базы данных (при необходимости):
-```bash
-docker-compose up -d
-```
+    ```bash
+    git clone <repository-url>
+    cd MEPhI_Go
+    ```
 
-5. Генерация PGP ключей:
-```bash
-go run scripts/generate_key.go
-```
+2. Поднимите тестовую БД:
 
-6. Запуск сервиса:
-```bash
-go run cmd/api/main.go
-```
+   ```bash
+   docker-compose up -d
+   ```
 
-Сервис будет доступен по адресу `http://localhost:8080`
+3. Скачайте зависимости:
 
-## Использование API
+   ```bash
+   go mod download
+   ```
 
-### Аутентификация
+4. Запустите приложение:
 
-- **Регистрация**  
-  `POST /api/register`  
-  Тело запроса:
-  ```json
-  {
-    "username": "user1",
-    "email": "email@example.com",
-    "password": "123456"
-  }
-  ```
+   ```bash
+   go run cmd/api/main.go
+   ```
 
-- **Вход**  
-  `POST /api/login`  
-  Тело запроса:
-  ```json
-  {
-    "email": "email@example.com",
-    "password": "123456"
-  }
-  ```
-  Возвращает JWT токен для авторизованных запросов.
+## Доступные эндпоинты
 
-### Управление счетами
+### Публичные
 
-- **Создать счет**  
-  `POST /api/accounts/create`  
-  Тело запроса:
-  ```json
-  {
-    "type": "savings"
-  }
-  ```
+- `POST /register` - Регистрация нового пользователя
+- `POST /login` - Авторизация пользователя
 
-- **Получить список счетов**  
-  `GET /api/accounts/list`
+### Защищенные (требуют `Authorization: Bearer <token>`)
 
-- **Пополнить счет**  
-  `POST /api/accounts/deposit`  
-  Тело запроса:
-  ```json
-  {
-    "account_id": 1,
-    "amount": 1000.00
-  }
-  ```
-
-- **Снять средства**  
-  `POST /api/accounts/withdraw`  
-  Тело запроса:
-  ```json
-  {
-    "account_id": 1,
-    "amount": 500.00
-  }
-  ```
-
-- **Перевод между счетами**  
-  `POST /api/accounts/transfer`  
-  Тело запроса:
-  ```json
-  {
-    "from_account_id": 1,
-    "to_account_id": 2,
-    "amount": 300.00
-  }
-  ```
-
-### Управление картами
-
-- **Создать виртуальную карту**  
-  `POST /api/cards/create`  
-  Тело запроса:
-  ```json
-  {
-    "account_id": 1
-  }
-  ```
-
-- **Получить список карт**  
-  `GET /api/cards/list`
-
-- **Получить информацию о карте**  
-  `GET /api/cards/get?card_id=1`
-
-### Кредиты
-
-- **Оформить кредит**  
-  `POST /api/credits/create`  
-  Тело запроса:
-  ```json
-  {
-    "account_id": 1,
-    "amount": 10000.00,
-    "term": 12,
-    "rate": 15.5
-  }
-  ```
-
-- **Получить список кредитов**  
-  `GET /api/credits/list`
-
-- **Получить информацию о кредите**  
-  `GET /api/credits/get?id=1`
-
-- **Получить график платежей**  
-  `GET /api/credits/schedule?id=1`
-
-- **Создать платеж**  
-  `POST /api/payments/create`  
-  Тело запроса:
-  ```json
-  {
-    "credit_id": 1,
-    "amount": 1000.00,
-    "due_date": "2024-05-01T00:00:00Z"
-  }
-  ```
-
-- **Обработать платеж**  
-  `POST /api/payments/process?payment_id=1`
-
-- **Получить платежи по кредиту**  
-  `GET /api/payments/list?credit_id=1`
-
-- **Получить ожидающие платежи**  
-  `GET /api/payments/pending`
-
-## Особенности реализации
-
-### Безопасность
-- Пароли хешируются с помощью bcrypt
-- Данные карт шифруются с помощью PGP
-- CVV хешируется с помощью bcrypt
-- Все запросы защищены JWT-аутентификацией
-- Используются параметризованные SQL-запросы
-
-### Интеграции
-- SMTP для отправки уведомлений
-- SOAP API ЦБ РФ для получения ключевой ставки
-- Автоматическое списание платежей по кредитам
-
-### Логирование
-Логи сохраняются в файл `app.log` и выводятся в консоль. Используется logrus с настройками:
-- Уровень логирования: Info
-- Формат: JSON
-- Выход: файл и консоль
-
-## Технические детали
-
-- Используется PostgreSQL с расширением pgcrypto
-- Реализован алгоритм Луна для генерации номеров карт
-- Расчет аннуитетных платежей для кредитов
-- Транзакции для обеспечения атомарности операций
-- Middleware для аутентификации и логирования
+- `POST /accounts` - Создать счет
+- `GET /accounts` - Получить список счетов
+- `POST /accounts/deposit` - Пополнить баланс
+- `POST /accounts/withdraw` - Списать средства
+- `POST /cards` - Выпустить виртуальную карту
+- `GET /cards` - Получить список своих карт
+- `POST /transfer` - Перевод средств
+- `POST /credits` - Оформление кредита
+- `GET /credits/{creditId}/schedule` - График платежей по кредиту
+- `GET /analytics` - Аналитика доходов и расходов пользователя
+- `GET /accounts/{accountId}/predict` - Прогноз баланса на N дней
